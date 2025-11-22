@@ -1,0 +1,583 @@
+{
+  "success": true,
+  "timestamp": "2025-11-22T18:15:27.459411",
+  "filename": "010101_01171.jpg",
+  "image_info": {
+    "width": 600,
+    "height": 910,
+    "aspect_ratio": 0.659,
+    "total_pixels": 546000
+  },
+  "detection_config": {
+    "score_threshold": 0.3,
+    "model": "RoDLA InternImage-XL",
+    "framework": "DINO with Robustness Enhancement",
+    "max_detections": 300
+  },
+  "core_results": {
+    "summary": {
+      "total_detections": 9,
+      "unique_classes": 6,
+      "average_confidence": 0.7486,
+      "median_confidence": 0.8697,
+      "min_confidence": 0.3002,
+      "max_confidence": 0.8956,
+      "coverage_percentage": 70.33,
+      "average_detection_area": 42667.05
+    },
+    "detections": [
+      {
+        "class_id": 48,
+        "class_name": "page number",
+        "bbox": {
+          "x1": 19.07524299621582,
+          "y1": 869.2457885742188,
+          "x2": 43.978759765625,
+          "y2": 895.2265625,
+          "width": 24.90351676940918,
+          "height": 25.98077392578125,
+          "center_x": 31.52700138092041,
+          "center_y": 882.2361755371094
+        },
+        "confidence": 0.8956131935119629,
+        "area": 647.0126391429221,
+        "aspect_ratio": 0.9585363715703986
+      },
+      {
+        "class_id": 49,
+        "class_name": "paragraph",
+        "bbox": {
+          "x1": 50.201778411865234,
+          "y1": 438.78167724609375,
+          "x2": 587.9674072265625,
+          "y2": 568.1760864257812,
+          "width": 537.7656288146973,
+          "height": 129.3944091796875,
+          "center_x": 319.08459281921387,
+          "center_y": 503.4788818359375
+        },
+        "confidence": 0.891350269317627,
+        "area": 69583.86581762088,
+        "aspect_ratio": 4.156019044593438
+      },
+      {
+        "class_id": 24,
+        "class_name": "figure",
+        "bbox": {
+          "x1": 75.82659912109375,
+          "y1": 88.99471282958984,
+          "x2": 139.0438690185547,
+          "y2": 131.38536071777344,
+          "width": 63.21726989746094,
+          "height": 42.390647888183594,
+          "center_x": 107.43523406982422,
+          "center_y": 110.19003677368164
+        },
+        "confidence": 0.8876059055328369,
+        "area": 2679.8210286755348,
+        "aspect_ratio": 1.4913022812062935
+      },
+      {
+        "class_id": 57,
+        "class_name": "section",
+        "bbox": {
+          "x1": 61.6401252746582,
+          "y1": 132.24069213867188,
+          "x2": 153.50588989257812,
+          "y2": 156.83941650390625,
+          "width": 91.86576461791992,
+          "height": 24.598724365234375,
+          "center_x": 107.57300758361816,
+          "center_y": 144.54005432128906
+        },
+        "confidence": 0.8873952031135559,
+        "area": 2259.7806224377127,
+        "aspect_ratio": 3.7345743321452365
+      },
+      {
+        "class_id": 49,
+        "class_name": "paragraph",
+        "bbox": {
+          "x1": 51.94346237182617,
+          "y1": 191.84837341308594,
+          "x2": 575.2906494140625,
+          "y2": 255.86282348632812,
+          "width": 523.3471870422363,
+          "height": 64.01445007324219,
+          "center_x": 313.61705589294434,
+          "center_y": 223.85559844970703
+        },
+        "confidence": 0.8696695566177368,
+        "area": 33501.78237588698,
+        "aspect_ratio": 8.175453923972606
+      },
+      {
+        "class_id": 49,
+        "class_name": "paragraph",
+        "bbox": {
+          "x1": 49.35143280029297,
+          "y1": 261.12969970703125,
+          "x2": 576.2130737304688,
+          "y2": 434.5870056152344,
+          "width": 526.8616409301758,
+          "height": 173.45730590820312,
+          "center_x": 312.78225326538086,
+          "center_y": 347.8583526611328
+        },
+        "confidence": 0.867506206035614,
+        "area": 91388.00082212337,
+        "aspect_ratio": 3.0374139513558505
+      },
+      {
+        "class_id": 35,
+        "class_name": "headline",
+        "bbox": {
+          "x1": 240.4971923828125,
+          "y1": 127.1843032836914,
+          "x2": 366.0450439453125,
+          "y2": 160.42575073242188,
+          "width": 125.5478515625,
+          "height": 33.24144744873047,
+          "center_x": 303.2711181640625,
+          "center_y": 143.80502700805664
+        },
+        "confidence": 0.6802309155464172,
+        "area": 4173.392310015857,
+        "aspect_ratio": 3.776846713914524
+      },
+      {
+        "class_id": 24,
+        "class_name": "figure",
+        "bbox": {
+          "x1": 7.568460464477539,
+          "y1": 615.8561401367188,
+          "x2": 598.9905395507812,
+          "y2": 879.2513427734375,
+          "width": 591.4220790863037,
+          "height": 263.39520263671875,
+          "center_x": 303.2795000076294,
+          "center_y": 747.5537414550781
+        },
+        "confidence": 0.45772916078567505,
+        "area": 155777.73836476647,
+        "aspect_ratio": 2.245379084986631
+      },
+      {
+        "class_id": 14,
+        "class_name": "chapter title",
+        "bbox": {
+          "x1": 165.36166381835938,
+          "y1": 1.9133442640304565,
+          "x2": 465.49285888671875,
+          "y2": 81.85188293457031,
+          "width": 300.1311950683594,
+          "height": 79.93853867053986,
+          "center_x": 315.42726135253906,
+          "center_y": 41.882613599300385
+        },
+        "confidence": 0.3001602590084076,
+        "area": 23992.049143207387,
+        "aspect_ratio": 3.7545244141292793
+      }
+    ]
+  },
+  "rodla_metrics": {
+    "note": "These are estimated metrics. Full mRD/mPE require clean baseline comparison.",
+    "estimated_mPE": 50.85,
+    "estimated_mRD": 19.94,
+    "confidence_std": 0.2108,
+    "confidence_range": 0.5955,
+    "robustness_score": 90.03,
+    "interpretation": {
+      "mPE_level": "high",
+      "mRD_level": "excellent",
+      "overall_robustness": "medium"
+    }
+  },
+  "spatial_analysis": {
+    "horizontal_distribution": {
+      "mean": 234.89,
+      "std": 110.05,
+      "skewness": -0.819,
+      "left_third": 3,
+      "center_third": 6,
+      "right_third": 0
+    },
+    "vertical_distribution": {
+      "mean": 349.49,
+      "std": 282.44,
+      "skewness": 0.768,
+      "top_third": 5,
+      "middle_third": 2,
+      "bottom_third": 2
+    },
+    "quadrant_distribution": {
+      "Q1": 2,
+      "Q2": 4,
+      "Q3": 1,
+      "Q4": 2
+    },
+    "size_distribution": {
+      "tiny": 3,
+      "small": 1,
+      "medium": 2,
+      "large": 3
+    },
+    "density_metrics": {
+      "average_nearest_neighbor_distance": 128.93,
+      "spatial_clustering_score": 0.4825
+    }
+  },
+  "class_analysis": {
+    "page number": {
+      "count": 1,
+      "percentage": 11.11,
+      "confidence_stats": {
+        "mean": 0.8956,
+        "std": 0.0,
+        "min": 0.8956,
+        "max": 0.8956
+      },
+      "area_stats": {
+        "mean": 647.01,
+        "std": 0.0,
+        "total": 647.01
+      },
+      "aspect_ratio_stats": {
+        "mean": 0.959,
+        "orientation": "square"
+      }
+    },
+    "paragraph": {
+      "count": 3,
+      "percentage": 33.33,
+      "confidence_stats": {
+        "mean": 0.8762,
+        "std": 0.0108,
+        "min": 0.8675,
+        "max": 0.8914
+      },
+      "area_stats": {
+        "mean": 64824.55,
+        "std": 23870.37,
+        "total": 194473.65
+      },
+      "aspect_ratio_stats": {
+        "mean": 5.123,
+        "orientation": "horizontal"
+      }
+    },
+    "figure": {
+      "count": 2,
+      "percentage": 22.22,
+      "confidence_stats": {
+        "mean": 0.6727,
+        "std": 0.2149,
+        "min": 0.4577,
+        "max": 0.8876
+      },
+      "area_stats": {
+        "mean": 79228.78,
+        "std": 76548.96,
+        "total": 158457.56
+      },
+      "aspect_ratio_stats": {
+        "mean": 1.868,
+        "orientation": "horizontal"
+      }
+    },
+    "section": {
+      "count": 1,
+      "percentage": 11.11,
+      "confidence_stats": {
+        "mean": 0.8874,
+        "std": 0.0,
+        "min": 0.8874,
+        "max": 0.8874
+      },
+      "area_stats": {
+        "mean": 2259.78,
+        "std": 0.0,
+        "total": 2259.78
+      },
+      "aspect_ratio_stats": {
+        "mean": 3.735,
+        "orientation": "horizontal"
+      }
+    },
+    "headline": {
+      "count": 1,
+      "percentage": 11.11,
+      "confidence_stats": {
+        "mean": 0.6802,
+        "std": 0.0,
+        "min": 0.6802,
+        "max": 0.6802
+      },
+      "area_stats": {
+        "mean": 4173.39,
+        "std": 0.0,
+        "total": 4173.39
+      },
+      "aspect_ratio_stats": {
+        "mean": 3.777,
+        "orientation": "horizontal"
+      }
+    },
+    "chapter title": {
+      "count": 1,
+      "percentage": 11.11,
+      "confidence_stats": {
+        "mean": 0.3002,
+        "std": 0.0,
+        "min": 0.3002,
+        "max": 0.3002
+      },
+      "area_stats": {
+        "mean": 23992.05,
+        "std": 0.0,
+        "total": 23992.05
+      },
+      "aspect_ratio_stats": {
+        "mean": 3.755,
+        "orientation": "horizontal"
+      }
+    }
+  },
+  "confidence_analysis": {
+    "distribution": {
+      "mean": 0.7486,
+      "median": 0.8697,
+      "std": 0.2108,
+      "min": 0.3002,
+      "max": 0.8956,
+      "q1": 0.6802,
+      "q3": 0.8876
+    },
+    "binned_distribution": {
+      "very_high (0.9-1.0)": 0,
+      "high (0.8-0.9)": 6,
+      "medium (0.6-0.8)": 1,
+      "low (0.4-0.6)": 1,
+      "very_low (0-0.4)": 1
+    },
+    "percentages": {
+      "very_high (0.9-1.0)": 0.0,
+      "high (0.8-0.9)": 66.67,
+      "medium (0.6-0.8)": 11.11,
+      "low (0.4-0.6)": 11.11,
+      "very_low (0-0.4)": 11.11
+    },
+    "entropy": 1.4466
+  },
+  "robustness_indicators": {
+    "stability_score": 71.85,
+    "coefficient_of_variation": 0.2815,
+    "high_confidence_ratio": 0.6667,
+    "prediction_consistency": "medium",
+    "model_certainty": "medium",
+    "robustness_rating": {
+      "rating": "good",
+      "score": 71.5
+    }
+  },
+  "layout_complexity": {
+    "class_diversity": 6,
+    "total_elements": 9,
+    "detection_density": 16.4835,
+    "average_element_distance": 128.93,
+    "complexity_score": 49.24,
+    "complexity_level": "moderate",
+    "layout_characteristics": {
+      "is_dense": true,
+      "is_diverse": false,
+      "is_structured": true
+    }
+  },
+  "quality_metrics": {
+    "overlap_analysis": {
+      "total_overlapping_pairs": 1,
+      "overlap_percentage": 11.11,
+      "average_iou": 0.0016
+    },
+    "size_consistency": {
+      "coefficient_of_variation": 1.1798,
+      "consistency_level": "low"
+    },
+    "detection_quality_score": 44.44
+  },
+  "interpretation": {
+    "overview": "Document Analysis Summary:\nDetected 9 layout elements across 6 different classes. \nThe model achieved an average confidence of 74.9%, indicating \nmedium certainty in predictions. \nThe detected elements cover 70.3% of the document area.",
+    "top_elements": "The most common elements are: paragraph (3 instances, 87.6% avg confidence), figure (2 instances, 67.3% avg confidence), page number (1 instances, 89.6% avg confidence)",
+    "rodla_analysis": "RoDLA Robustness Analysis:\nEstimated perturbation effect (mPE): 50.85 - high level\nEstimated robustness degradation (mRD): 19.94 - excellent\nOverall robustness: medium\nRobustness score: 90.03/100",
+    "layout_complexity": "Layout Complexity:\nComplexity level: moderate (score: 49.2/100)\nClass diversity: 6 unique element types\nDetection density: 16.48 elements per megapixel\nSpatial structure: Structured",
+    "key_findings": [
+      "\u2713 High document coverage - most of the page contains layout elements"
+    ],
+    "perturbation_assessment": "Based on RoDLA metrics:\n\u2713 Minimal to no perturbation effects detected\nConfidence variability: 0.281 (high variability - potentially perturbed)",
+    "recommendations": [
+      "Dense layout with lower confidence - verify detection accuracy manually"
+    ],
+    "confidence_summary": {
+      "level": "medium",
+      "stability": "medium",
+      "rating": "good"
+    }
+  },
+  "all_detections": [
+    {
+      "class_id": 48,
+      "class_name": "page number",
+      "bbox": {
+        "x1": 19.07524299621582,
+        "y1": 869.2457885742188,
+        "x2": 43.978759765625,
+        "y2": 895.2265625,
+        "width": 24.90351676940918,
+        "height": 25.98077392578125,
+        "center_x": 31.52700138092041,
+        "center_y": 882.2361755371094
+      },
+      "confidence": 0.8956131935119629,
+      "area": 647.0126391429221,
+      "aspect_ratio": 0.9585363715703986
+    },
+    {
+      "class_id": 49,
+      "class_name": "paragraph",
+      "bbox": {
+        "x1": 50.201778411865234,
+        "y1": 438.78167724609375,
+        "x2": 587.9674072265625,
+        "y2": 568.1760864257812,
+        "width": 537.7656288146973,
+        "height": 129.3944091796875,
+        "center_x": 319.08459281921387,
+        "center_y": 503.4788818359375
+      },
+      "confidence": 0.891350269317627,
+      "area": 69583.86581762088,
+      "aspect_ratio": 4.156019044593438
+    },
+    {
+      "class_id": 24,
+      "class_name": "figure",
+      "bbox": {
+        "x1": 75.82659912109375,
+        "y1": 88.99471282958984,
+        "x2": 139.0438690185547,
+        "y2": 131.38536071777344,
+        "width": 63.21726989746094,
+        "height": 42.390647888183594,
+        "center_x": 107.43523406982422,
+        "center_y": 110.19003677368164
+      },
+      "confidence": 0.8876059055328369,
+      "area": 2679.8210286755348,
+      "aspect_ratio": 1.4913022812062935
+    },
+    {
+      "class_id": 57,
+      "class_name": "section",
+      "bbox": {
+        "x1": 61.6401252746582,
+        "y1": 132.24069213867188,
+        "x2": 153.50588989257812,
+        "y2": 156.83941650390625,
+        "width": 91.86576461791992,
+        "height": 24.598724365234375,
+        "center_x": 107.57300758361816,
+        "center_y": 144.54005432128906
+      },
+      "confidence": 0.8873952031135559,
+      "area": 2259.7806224377127,
+      "aspect_ratio": 3.7345743321452365
+    },
+    {
+      "class_id": 49,
+      "class_name": "paragraph",
+      "bbox": {
+        "x1": 51.94346237182617,
+        "y1": 191.84837341308594,
+        "x2": 575.2906494140625,
+        "y2": 255.86282348632812,
+        "width": 523.3471870422363,
+        "height": 64.01445007324219,
+        "center_x": 313.61705589294434,
+        "center_y": 223.85559844970703
+      },
+      "confidence": 0.8696695566177368,
+      "area": 33501.78237588698,
+      "aspect_ratio": 8.175453923972606
+    },
+    {
+      "class_id": 49,
+      "class_name": "paragraph",
+      "bbox": {
+        "x1": 49.35143280029297,
+        "y1": 261.12969970703125,
+        "x2": 576.2130737304688,
+        "y2": 434.5870056152344,
+        "width": 526.8616409301758,
+        "height": 173.45730590820312,
+        "center_x": 312.78225326538086,
+        "center_y": 347.8583526611328
+      },
+      "confidence": 0.867506206035614,
+      "area": 91388.00082212337,
+      "aspect_ratio": 3.0374139513558505
+    },
+    {
+      "class_id": 35,
+      "class_name": "headline",
+      "bbox": {
+        "x1": 240.4971923828125,
+        "y1": 127.1843032836914,
+        "x2": 366.0450439453125,
+        "y2": 160.42575073242188,
+        "width": 125.5478515625,
+        "height": 33.24144744873047,
+        "center_x": 303.2711181640625,
+        "center_y": 143.80502700805664
+      },
+      "confidence": 0.6802309155464172,
+      "area": 4173.392310015857,
+      "aspect_ratio": 3.776846713914524
+    },
+    {
+      "class_id": 24,
+      "class_name": "figure",
+      "bbox": {
+        "x1": 7.568460464477539,
+        "y1": 615.8561401367188,
+        "x2": 598.9905395507812,
+        "y2": 879.2513427734375,
+        "width": 591.4220790863037,
+        "height": 263.39520263671875,
+        "center_x": 303.2795000076294,
+        "center_y": 747.5537414550781
+      },
+      "confidence": 0.45772916078567505,
+      "area": 155777.73836476647,
+      "aspect_ratio": 2.245379084986631
+    },
+    {
+      "class_id": 14,
+      "class_name": "chapter title",
+      "bbox": {
+        "x1": 165.36166381835938,
+        "y1": 1.9133442640304565,
+        "x2": 465.49285888671875,
+        "y2": 81.85188293457031,
+        "width": 300.1311950683594,
+        "height": 79.93853867053986,
+        "center_x": 315.42726135253906,
+        "center_y": 41.882613599300385
+      },
+      "confidence": 0.3001602590084076,
+      "area": 23992.049143207387,
+      "aspect_ratio": 3.7545244141292793
+    }
+  ],
+  "visualizations_note": "Visualizations saved as separate PNG files"
+}
