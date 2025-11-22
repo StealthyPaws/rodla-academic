@@ -1,0 +1,34 @@
+"""Configuration package for RoDLA API"""
+from .settings import (
+    REPO_ROOT,
+    MODEL_CONFIG_PATH,
+    MODEL_WEIGHTS_PATH,
+    OUTPUT_DIR,
+    DEFAULT_SCORE_THRESHOLD,
+    MAX_DETECTIONS_PER_IMAGE,
+    BASELINE_MAP,
+    MODEL_INFO,
+    API_TITLE,
+    API_HOST,
+    API_PORT,
+    CORS_ORIGINS,
+    CORS_METHODS,
+    CORS_HEADERS
+)
+
+__all__ = [
+    'REPO_ROOT',
+    'MODEL_CONFIG_PATH',
+    'MODEL_WEIGHTS_PATH',
+    'OUTPUT_DIR',
+    'DEFAULT_SCORE_THRESHOLD',
+    'MAX_DETECTIONS_PER_IMAGE',
+    'BASELINE_MAP',
+    'MODEL_INFO',
+    'API_TITLE',
+    'API_HOST',
+    'API_PORT',
+    'CORS_ORIGINS',
+    'CORS_METHODS',
+    'CORS_HEADERS'
+]

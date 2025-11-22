@@ -1,6 +1,6 @@
 {
   "success": true,
-  "timestamp": "2025-11-22T18:15:27.459411",
+  "timestamp": "2025-11-22T20:24:38.924651",
   "filename": "010101_01171.jpg",
   "image_info": {
     "width": 600,
@@ -207,9 +207,9 @@
       "mean": 349.49,
       "std": 282.44,
       "skewness": 0.768,
-      "top_third": 5,
-      "middle_third": 2,
-      "bottom_third": 2
+      "left_third": 5,
+      "center_third": 2,
+      "right_third": 2
     },
     "quadrant_distribution": {
       "Q1": 2,
@@ -385,13 +385,13 @@
     "class_diversity": 6,
     "total_elements": 9,
     "detection_density": 16.4835,
-    "average_element_distance": 128.93,
-    "complexity_score": 49.24,
+    "average_element_distance": 392.42,
+    "complexity_score": 38.7,
     "complexity_level": "moderate",
     "layout_characteristics": {
       "is_dense": true,
       "is_diverse": false,
-      "is_structured": true
+      "is_structured": false
     }
   },
   "quality_metrics": {
@@ -410,7 +410,7 @@
     "overview": "Document Analysis Summary:\nDetected 9 layout elements across 6 different classes. \nThe model achieved an average confidence of 74.9%, indicating \nmedium certainty in predictions. \nThe detected elements cover 70.3% of the document area.",
     "top_elements": "The most common elements are: paragraph (3 instances, 87.6% avg confidence), figure (2 instances, 67.3% avg confidence), page number (1 instances, 89.6% avg confidence)",
     "rodla_analysis": "RoDLA Robustness Analysis:\nEstimated perturbation effect (mPE): 50.85 - high level\nEstimated robustness degradation (mRD): 19.94 - excellent\nOverall robustness: medium\nRobustness score: 90.03/100",
-    "layout_complexity": "Layout Complexity:\nComplexity level: moderate (score: 49.2/100)\nClass diversity: 6 unique element types\nDetection density: 16.48 elements per megapixel\nSpatial structure: Structured",
+    "layout_complexity": "Layout Complexity:\nComplexity level: moderate (score: 38.7/100)\nClass diversity: 6 unique element types\nDetection density: 16.48 elements per megapixel\nSpatial structure: Unstructured",
     "key_findings": [
       "\u2713 High document coverage - most of the page contains layout elements"
     ],
