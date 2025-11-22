@@ -91,3 +91,78 @@ class DetectionResponse(BaseModel):
     interpretation: Dict[str, Any]
     all_detections: List[Detection]
     visualizations: Optional[Dict[str, str]] = None
+
+
+# ============================================================================
+# PERTURBATION SCHEMAS
+# ============================================================================
+from enum import Enum
+
+class PerturbationType(str, Enum):
+    """Available perturbation types."""
+    # Blur
+    defocus = "defocus"
+    vibration = "vibration"
+    # Noise
+    speckle = "speckle"
+    texture = "texture"
+    # Content
+    watermark = "watermark"
+    background = "background"
+    # Inconsistency
+    ink_holdout = "ink_holdout"
+    ink_bleeding = "ink_bleeding"
+    illumination = "illumination"
+    # Spatial
+    rotation = "rotation"
+    keystoning = "keystoning"
+    warping = "warping"
+
+
+class PerturbationConfig(BaseModel):
+    """Single perturbation configuration."""
+    type: PerturbationType = Field(
+        ..., 
+        description="Type of perturbation to apply"
+    )
+    degree: int = Field(
+        1, 
+        ge=1, 
+        le=3, 
+        description="Intensity: 1=mild, 2=moderate, 3=severe"
+    )
+    background_folder: Optional[str] = Field(
+        None,
+        description="Path to background images (only for 'background' type)"
+    )
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "type": "defocus",
+                "degree": 2
+            }
+        }
+
+
+class PerturbationResponse(BaseModel):
+    """Response model for perturbation operations."""
+    success: bool
+    message: str
+    perturbations_applied: List[Dict[str, Any]]
+    perturbations_failed: List[Dict[str, Any]]
+    total_perturbations: int
+    success_rate: float
+    image_base64: Optional[str] = None
+    saved_path: Optional[str] = None
+    original_shape: List[int]
+    perturbed_shape: List[int]
+
+
+class PerturbationInfoResponse(BaseModel):
+    """Response model for perturbation information endpoint."""
+    total_perturbations: int
+    categories: Dict[str, Dict[str, Any]]
+    all_types: List[str]
+    degree_levels: Dict[int, str]
+    notes: Dict[str, str]

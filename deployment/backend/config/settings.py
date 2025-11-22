@@ -51,3 +51,16 @@ API_PORT = 8000
 CORS_ORIGINS = ["*"]
 CORS_METHODS = ["*"]
 CORS_HEADERS = ["*"]
+
+# ============================================================================
+# PERTURBATION CONFIGURATION
+# ============================================================================
+
+# Perturbation output directory
+PERTURBATION_OUTPUT_DIR = OUTPUT_DIR / "perturbations"
+
+# Maximum number of perturbations per request
+MAX_PERTURBATIONS_PER_REQUEST = 5
+
+# Background images folder (default location)
+DEFAULT_BACKGROUND_FOLDER = REPO_ROOT / "perturbation" / "background_image"
