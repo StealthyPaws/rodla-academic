@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 import base64
+import numpy as np
 
 from config.settings import OUTPUT_DIR
 from utils.metrics.core import (

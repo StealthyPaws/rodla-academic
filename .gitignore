@@ -161,6 +161,9 @@ cython_debug/
 
 model/ops_dcnv3/*.deb
 model/result/m6doc/*/*.json
+# Ignore all output files from backend
+deployment/backend/outputs/
+
 
 
 # PyCharm
