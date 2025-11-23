@@ -64,3 +64,44 @@ MAX_PERTURBATIONS_PER_REQUEST = 5
 
 # Background images folder (default location)
 DEFAULT_BACKGROUND_FOLDER = REPO_ROOT / "perturbation" / "background_image"
+
+
+# ============================================================================
+# BATCH PROCESSING CONFIGURATION
+# ============================================================================
+
+# Job storage directory
+JOBS_DIR = OUTPUT_DIR / "jobs"
+
+# Batch processing limits
+MAX_BATCH_SIZE = 300  # Maximum images per batch
+MIN_BATCH_SIZE = 1    # Minimum images per batch
+
+# Job retention
+JOB_RETENTION_HOURS = 48  # Keep job metadata for 48 hours
+MAX_CONCURRENT_JOBS = 10  # Maximum active jobs (future use)
+
+# Batch output directory prefix
+BATCH_OUTPUT_PREFIX = "batch_"
+
+# Visualization modes
+VISUALIZATION_MODES = ["none", "per_image", "summary", "both"]
+
+# Default batch settings
+DEFAULT_BATCH_CONFIG = {
+    "score_threshold": 0.3,
+    "visualization_mode": "none",
+    "save_json": True,
+    "perturbation_mode": "shared"
+}
+
+# Processing time estimation (seconds per image)
+ESTIMATED_TIME_PER_IMAGE = 3.0
+ESTIMATED_TIME_PER_VIZ = 0.5  # Additional time for visualizations
+
+# Create jobs directory
+JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
+print(f"📁 Batch processing directories initialized:")
+print(f"   - Jobs: {JOBS_DIR}")
+print(f"   - Max batch size: {MAX_BATCH_SIZE} images")

@@ -1,5 +1,5 @@
 """API route definitions"""
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Depends,BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse, Response
 import tempfile
 import os
@@ -20,6 +20,8 @@ from services.perturbation import (
     get_perturbation_info_service
 )
 from api.schemas import PerturbationConfig, PerturbationResponse
+import asyncio
+
 
 
 router = APIRouter()
@@ -406,3 +408,349 @@ async def detect_with_perturbation(
         for path in [tmp_path, perturbed_tmp_path]:
             if path and os.path.exists(path):
                 os.unlink(path)
+
+
+# ============================================================================
+# BATCH PROCESSING ENDPOINTS
+# ============================================================================
+
+@router.post("/api/detect-batch")
+async def detect_batch(
+    files: List[UploadFile] = File(..., description="1-300 image files to process"),
+    score_thr: str = Form("0.3", description="Confidence threshold (0.0-1.0)"),
+    perturbations: Optional[str] = Form(None, description="JSON array of perturbation configs"),
+    visualization_mode: str = Form("none", description="Visualization mode: none|per_image|summary|both"),
+    save_json: str = Form("true", description="Save results to disk"),
+    background_folder: Optional[str] = Form(None, description="Background images folder path"),
+    background_tasks: BackgroundTasks = None
+):
+    temp_file_paths = []
+
+    try:
+        from config.settings import (
+            MAX_BATCH_SIZE,
+            MIN_BATCH_SIZE,
+            VISUALIZATION_MODES,
+            ESTIMATED_TIME_PER_IMAGE,
+            MAX_PERTURBATIONS_PER_REQUEST,
+        )
+        from services.batch_job_manager import get_job_manager
+        from services.batch_processing import process_batch_job, save_uploaded_file_temp
+
+        print("\n" + "=" * 60)
+        print("📥 Batch Detection Request Received")
+        print("=" * 60)
+
+        # ====================================================================
+        # VALIDATION PHASE
+        # ====================================================================
+
+        # 1. Validate file count
+        if not files or len(files) == 0:
+            raise HTTPException(status_code=400, detail="At least one file is required")
+
+        if len(files) < MIN_BATCH_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum {MIN_BATCH_SIZE} file(s) required, got {len(files)}",
+            )
+
+        if len(files) > MAX_BATCH_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Maximum {MAX_BATCH_SIZE} files allowed, got {len(files)}",
+            )
+
+        print(f"✓ File count valid: {len(files)} images")
+
+        # 2. Validate file types
+        for i, file in enumerate(files):
+            if not file.content_type or not file.content_type.startswith("image/"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File {i+1} ({file.filename}) is not an image. Content-Type: {file.content_type}",
+                )
+
+        print(f"✓ All files are valid images")
+
+        # 3. Parse and validate score threshold
+        try:
+            score_threshold = float(score_thr)
+            if not 0 <= score_threshold <= 1:
+                raise ValueError("Must be between 0 and 1")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid score_thr: {e}")
+
+        print(f"✓ Score threshold: {score_threshold}")
+
+        # 4. Validate visualization mode
+        if visualization_mode not in VISUALIZATION_MODES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid visualization_mode '{visualization_mode}'. Must be one of: {VISUALIZATION_MODES}",
+            )
+
+        print(f"✓ Visualization mode: {visualization_mode}")
+
+        # 5. Parse and validate perturbations
+        perturbation_config = None
+        perturbation_mode = "shared"
+
+        if perturbations:
+            try:
+                pert_data = json.loads(perturbations)
+
+                if not isinstance(pert_data, list):
+                    raise ValueError("Perturbations must be a JSON array")
+
+                if len(pert_data) == 0:
+                    raise ValueError("Perturbations array cannot be empty")
+
+                # Detect per-image mode
+                if isinstance(pert_data[0], list):
+                    perturbation_mode = "per_image"
+                    print("   Detected per-image perturbation mode")
+
+                    if len(pert_data) != len(files):
+                        raise ValueError(
+                            f"Per-image perturbations count ({len(pert_data)}) must match file count ({len(files)})"
+                        )
+
+                    for i, pert_list in enumerate(pert_data):
+                        if not isinstance(pert_list, list):
+                            raise ValueError(
+                                f"Perturbations[{i}] must be an array, got {type(pert_list).__name__}"
+                            )
+
+                        if len(pert_list) > MAX_PERTURBATIONS_PER_REQUEST:
+                            raise ValueError(
+                                f"Image {i+1}: Maximum {MAX_PERTURBATIONS_PER_REQUEST} perturbations allowed, got {len(pert_list)}"
+                            )
+
+                        for j, pert in enumerate(pert_list):
+                            validate_perturbation_config(pert, f"Image {i+1}, Perturbation {j+1}")
+
+                    print(f"   ✓ Validated {len(pert_data)} per-image sets")
+
+                else:
+                    perturbation_mode = "shared"
+                    print("   Detected shared perturbation mode")
+
+                    if len(pert_data) > MAX_PERTURBATIONS_PER_REQUEST:
+                        raise ValueError(
+                            f"Maximum {MAX_PERTURBATIONS_PER_REQUEST} perturbations allowed, got {len(pert_data)}"
+                        )
+
+                    for i, pert in enumerate(pert_data):
+                        validate_perturbation_config(pert, f"Perturbation {i+1}")
+
+                    print(f"   ✓ Validated {len(pert_data)} shared perturbations")
+
+                perturbation_config = pert_data
+
+            except json.JSONDecodeError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid JSON in perturbations parameter: {e}")
+
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid perturbations: {e}")
+
+        else:
+            print("✓ No perturbations specified")
+
+        # 6. Parse save_json
+        should_save_json = save_json.lower() in ("true", "1", "yes")
+
+        # ====================================================================
+        # JOB CREATION PHASE
+        # ====================================================================
+
+        print("\n📋 Creating batch job...")
+
+        job_config = {
+            "total_images": len(files),
+            "score_threshold": score_threshold,
+            "visualization_mode": visualization_mode,
+            "perturbations": perturbation_config,
+            "perturbation_mode": perturbation_mode,
+            "save_json": should_save_json,
+            "background_folder": background_folder,
+            "filenames": [f.filename for f in files],
+        }
+
+        job_manager = get_job_manager()
+        job_id = job_manager.create_job(job_config)
+
+        print(f"✓ Job created: {job_id}")
+
+        # ====================================================================
+        # FILE UPLOAD PHASE
+        # ====================================================================
+
+        print("\n💾 Saving uploaded files...")
+
+        for i, file in enumerate(files):
+            try:
+                temp_path = save_uploaded_file_temp(file)
+                temp_file_paths.append(temp_path)
+
+                if (i + 1) % 10 == 0 or i + 1 == len(files):
+                    print(f"   Saved {i + 1}/{len(files)}")
+
+            except Exception as e:
+                for path in temp_file_paths:
+                    try:
+                        if os.path.exists(path):
+                            os.unlink(path)
+                    except:
+                        pass
+
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to save file {i+1} ({file.filename}): {str(e)}",
+                )
+
+        print("✓ All files saved")
+
+        # ====================================================================
+        # BACKGROUND TASK LAUNCH
+        # ====================================================================
+
+        print("\n🚀 Launching background task...")
+
+        background_tasks.add_task(
+            process_batch_job,
+            job_id=job_id,
+            temp_file_paths=temp_file_paths,
+            config=job_config,
+            job_manager=job_manager,
+        )
+
+        print("✓ Background task launched")
+
+        # ====================================================================
+        # RESPONSE
+        # ====================================================================
+
+        base_time = len(files) * ESTIMATED_TIME_PER_IMAGE
+
+        if visualization_mode == "per_image":
+            from config.settings import ESTIMATED_TIME_PER_VIZ
+            base_time += len(files) * ESTIMATED_TIME_PER_VIZ * 8
+
+        elif visualization_mode == "both":
+            from config.settings import ESTIMATED_TIME_PER_VIZ
+            base_time += len(files) * ESTIMATED_TIME_PER_VIZ * 8 + ESTIMATED_TIME_PER_VIZ * 8
+
+        elif visualization_mode == "summary":
+            from config.settings import ESTIMATED_TIME_PER_VIZ
+            base_time += ESTIMATED_TIME_PER_VIZ * 8
+
+        estimated_time = int(base_time)
+
+        response_data = {
+            "job_id": job_id,
+            "status": "queued",
+            "message": f"Batch processing started for {len(files)} images",
+            "total_images": len(files),
+            "status_endpoint": f"/api/batch-job/{job_id}",
+            "estimated_time_seconds": estimated_time,
+        }
+
+        print("\n✅ Request accepted")
+        print("=" * 60)
+
+        return JSONResponse(content=response_data, status_code=202)
+
+    except HTTPException:
+        for path in temp_file_paths:
+            try:
+                if os.path.exists(path):
+                    os.unlink(path)
+            except:
+                pass
+        raise
+
+    except Exception as e:
+        for path in temp_file_paths:
+            try:
+                if os.path.exists(path):
+                    os.unlink(path)
+            except:
+                pass
+
+        print(f"❌ ERROR: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+        return JSONResponse(
+            content={"success": False, "error": f"Failed to create batch job: {str(e)}"},
+            status_code=500,
+        )
+
+
+# ============================================================================
+# GET JOB STATUS ENDPOINT
+# ============================================================================
+
+@router.get("/api/batch-job/{job_id}")
+async def get_batch_job_status(job_id: str):
+    try:
+        from services.batch_job_manager import get_job_manager
+
+        job_manager = get_job_manager()
+        job = job_manager.get_job(job_id)
+
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+        return JSONResponse(content=job)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(f"ERROR in get_batch_job_status: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+        return JSONResponse(
+            content={"success": False, "error": f"Failed to retrieve job status: {str(e)}"},
+            status_code=500,
+        )
+
+
+# ============================================================================
+# HELPER: PERTURBATION VALIDATOR
+# ============================================================================
+
+def validate_perturbation_config(pert: dict, context: str = ""):
+    from config.settings import PERTURBATION_CATEGORIES
+
+    all_pert_types = [p for category in PERTURBATION_CATEGORIES.values() for p in category["types"]]
+
+    if not isinstance(pert, dict):
+        raise ValueError(f"{context}: Perturbation must be an object, got {type(pert).__name__}")
+
+    if "type" not in pert:
+        raise ValueError(f"{context}: Missing required field 'type'")
+
+    if "degree" not in pert:
+        raise ValueError(f"{context}: Missing required field 'degree'")
+
+    pert_type = pert["type"]
+    if pert_type not in all_pert_types:
+        raise ValueError(
+            f"{context}: Invalid perturbation type '{pert_type}'. Must be one of: {all_pert_types}"
+        )
+
+    try:
+        degree = int(pert["degree"])
+        if degree not in (1, 2, 3):
+            raise ValueError("Must be 1, 2, or 3")
+    except Exception as e:
+        raise ValueError(f"{context}: Invalid degree value '{pert['degree']}'. {e}")
+
+    # background perturbation is allowed without folder; job-level folder may be passed
+    return
