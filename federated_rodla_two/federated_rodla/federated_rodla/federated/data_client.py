@@ -13,7 +13,7 @@ from typing import List, Dict, Optional
 import os
 
 from utils.data_utils import DataUtils, FederatedDataConverter
-from augmentation_engine import PubLayNetAugmentationEngine
+from federated_rodla_two.federated_rodla.federated_rodla.federated.perturbation_engine import PubLayNetAugmentationEngine
 
 class FederatedDataClient:
     def __init__(self, client_id: str, server_url: str, data_loader, 
