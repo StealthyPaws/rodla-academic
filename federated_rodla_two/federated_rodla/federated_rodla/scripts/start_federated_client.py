@@ -20,6 +20,7 @@ from mmcv import Config
 from mmdet.models import build_detector
 from mmdet.datasets import build_dataset
 from mmdet.apis import train_detector, set_random_seed
+from utils.privacy_utils import PrivacyEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,7 +28,8 @@ logger = logging.getLogger(__name__)
 
 class FederatedTrainingClient:
     def __init__(self, client_id, server_url, config_path, data_root, annotation_file, 
-                 local_epochs=1, local_lr=0.0001, device='cuda:0', work_dir=None):
+                 local_epochs=1, local_lr=0.0001, device='cuda:0', work_dir=None,
+                 privacy_noise=0.0, privacy_clip=1.0):
         self.client_id = client_id
         self.server_url = server_url
         self.config_path = config_path
@@ -37,6 +39,8 @@ class FederatedTrainingClient:
         self.local_lr = local_lr
         self.device = device
         self.work_dir = work_dir or f'./work_dirs/client_{client_id}'
+        
+        self.privacy_engine = PrivacyEngine(noise_multiplier=privacy_noise, max_grad_norm=privacy_clip)
         
         self.model = None
         self.cfg = None
@@ -126,8 +130,8 @@ class FederatedTrainingClient:
         # 4. Load Global Weights
         weights_bytes = base64.b64decode(global_weights_b64)
         buffer = io.BytesIO(weights_bytes)
-        state_dict = torch.load(buffer, map_location='cpu')
-        model.load_state_dict(state_dict, strict=False)
+        global_state_dict = torch.load(buffer, map_location='cpu')
+        model.load_state_dict(global_state_dict, strict=False)
         
         # Move to device
         model.to(self.device)
@@ -150,8 +154,11 @@ class FederatedTrainingClient:
         
         logger.info(f"Local training for round {round_num} completed.")
         
-        # 7. Return updated state dict
-        return model.state_dict()
+        # 7. Apply Privacy and Return
+        trained_state_dict = model.state_dict()
+        privatized_state_dict = self.privacy_engine.clip_and_noise(global_state_dict, trained_state_dict)
+        
+        return privatized_state_dict
 
     def submit_update(self, model_state_dict, round_num):
         """Submit updated model weights to server"""
@@ -235,6 +242,8 @@ def main():
     parser.add_argument('--local-epochs', type=int, default=1, help='Epochs per round')
     parser.add_argument('--local-lr', type=float, default=0.0001, help='Local learning rate')
     parser.add_argument('--device', default='cuda:0', help='Device (cuda:0 or cpu)')
+    parser.add_argument('--privacy-noise', type=float, default=0.0, help='DP Noise Multiplier (e.g., 0.1)')
+    parser.add_argument('--privacy-clip', type=float, default=1.0, help='DP Max Gradient Norm')
     
     args = parser.parse_args()
     
@@ -246,7 +255,9 @@ def main():
         annotation_file=args.annotation_file,
         local_epochs=args.local_epochs,
         local_lr=args.local_lr,
-        device=args.device
+        device=args.device,
+        privacy_noise=args.privacy_noise,
+        privacy_clip=args.privacy_clip
     )
     
     client.run()

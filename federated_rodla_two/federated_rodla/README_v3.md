@@ -43,7 +43,8 @@ The client is the "musician". It possesses the talent (compute) and the sheet mu
 *   **Process**:
     1.  **Pull**: Downloads global weights.
     2.  **Train**: Fine-tunes the model on local PubLayNet data for $E$ epochs.
-    3.  **Push**: Uploads the *difference* (or new weights) to the server.
+    3.  **Privacy**: Applies **Differential Privacy** (Noise + Clipping) if enabled.
+    4.  **Push**: Uploads the *privatized* weights to the server.
 *   **Privacy**: Raw images (`.jpg`) and annotations (`.json`) never leave the local disk.
 
 ### 2.3 The Robustness Evaluator (`run_robustness_evaluation.py`)
@@ -54,7 +55,24 @@ This is the "critic". It runs *after* the concert (training) is finished.
 
 ---
 
-## 3. The RoDLA Perturbation Engine
+## 3. Privacy Preserving Mechanisms (New!)
+**File**: `utils/privacy_utils.py`
+
+To further protect client data, we have implemented **Differential Privacy (DP)** mechanisms. Even though raw data isn't shared, model updates *can* theoretically leak information about the training data. We mitigate this using:
+
+1.  **Gradient Clipping**:
+    *   Limits the maximum influence of any single update.
+    *   Prevents outliers (or specific rare documents) from shifting the model too much.
+    *   Controlled by `--privacy-clip`.
+
+2.  **Gaussian Noise Injection**:
+    *   Adds random noise to the model weights before upload.
+    *   Makes it statistically impossible to reverse-engineer the exact training samples.
+    *   Controlled by `--privacy-noise`.
+
+---
+
+## 4. The RoDLA Perturbation Engine
 **File**: `federated/perturbation_engine.py`
 
 This engine is the heart of the robustness benchmark. It implements the 12 perturbations defined in the RoDLA paper. These are applied **only during evaluation**, simulating "Out-of-Distribution" (OOD) testing.
@@ -82,9 +100,9 @@ Each perturbation has 3 levels ($s=1, 2, 3$).
 
 ---
 
-## 4. Detailed Implementation Walkthrough
+## 5. Detailed Implementation Walkthrough
 
-### 4.1 Server Logic (`start_federated_server.py`)
+### 5.1 Server Logic (`start_federated_server.py`)
 The server uses `Flask` to handle concurrent requests.
 *   **`_perform_aggregation()`**: This is the critical function.
     ```python
@@ -94,16 +112,16 @@ The server uses `Flask` to handle concurrent requests.
     ```
     It iterates through the state dictionaries of all submitted models, sums the tensors layer-by-layer, and divides by the count. This new average becomes the starting point for the next round.
 
-### 4.2 Client Logic (`start_federated_client.py`)
+### 5.2 Client Logic (`start_federated_client.py`)
 The client wraps MMDetection's `train_detector` API.
 *   **`_train_local_model()`**:
     1.  **Config Loading**: Reads `configs/publaynet/rodla_config.py`.
     2.  **Weight Injection**: Overwrites the model's initial weights with the base64-decoded weights received from the server.
     3.  **Training**: Runs a standard PyTorch training loop (Forward -> Loss -> Backward -> Optimizer Step) for `local_epochs`.
-    4.  **Extraction**: Extracts the new `state_dict` from the GPU/CPU.
+    4.  **Privacy Step**: Calls `PrivacyEngine.clip_and_noise()` to sanitize the weights.
     5.  **Serialization**: Serializes the `state_dict` to a BytesIO buffer -> Base64 string -> JSON payload.
 
-### 4.3 Evaluation Logic (`run_robustness_evaluation.py`)
+### 5.3 Evaluation Logic (`run_robustness_evaluation.py`)
 *   **Dynamic Corruption**: Unlike standard datasets where you might have `test_clean` and `test_noisy` folders, this script generates noisy images in RAM.
     *   It loads a clean image.
     *   It calls `PubLayNetPerturbationEngine.perturb(image, type='defocus', severity=2)`.
@@ -112,9 +130,9 @@ The client wraps MMDetection's `train_detector` API.
 
 ---
 
-## 5. Deployment & Usage Guide
+## 6. Deployment & Usage Guide
 
-### 5.1 Environment Setup
+### 6.1 Environment Setup
 **Prerequisites**:
 *   Anaconda or Miniconda
 *   NVIDIA GPU (Recommended) or CPU (Slow but functional)
@@ -134,13 +152,13 @@ pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.1
 pip install mmdet flask requests numpy pillow opencv-python
 ```
 
-### 5.2 Data Preparation
+### 6.2 Data Preparation
 You need the **PubLayNet** dataset.
 *   **Images**: `train/` directory containing JPGs.
 *   **Annotations**: `annotations/train.json` (COCO format).
 *   *Note*: For FL, you can split this dataset across laptops. Laptop A gets the first 500 images, Laptop B gets the next 500, etc.
 
-### 5.3 Execution: The 3-Laptop Setup
+### 6.3 Execution: The 3-Laptop Setup
 **Objective**: Run 1 Server and 2 Clients.
 
 #### **Machine 1: The Server**
@@ -151,7 +169,7 @@ You need the **PubLayNet** dataset.
     ```
 *   **Output**: "Server started. Waiting for clients..."
 
-#### **Machine 2: Client A**
+#### **Machine 2: Client A (With Privacy)**
 *   **Data Location**: `D:/Datasets/PubLayNet/subset_A`
 *   **Command**:
     ```bash
@@ -161,10 +179,11 @@ You need the **PubLayNet** dataset.
         --config configs/publaynet/rodla_config.py \
         --data-root D:/Datasets/PubLayNet/subset_A \
         --annotation-file D:/Datasets/PubLayNet/annotations/subset_A.json \
-        --local-epochs 1
+        --local-epochs 1 \
+        --privacy-noise 0.1 --privacy-clip 1.0
     ```
 
-#### **Machine 3: Client B**
+#### **Machine 3: Client B (With Privacy)**
 *   **Data Location**: `C:/Users/Data/PubLayNet/subset_B`
 *   **Command**:
     ```bash
@@ -174,21 +193,23 @@ You need the **PubLayNet** dataset.
         --config configs/publaynet/rodla_config.py \
         --data-root C:/Users/Data/PubLayNet/subset_B \
         --annotation-file C:/Users/Data/PubLayNet/annotations/subset_B.json \
-        --local-epochs 1
+        --local-epochs 1 \
+        --privacy-noise 0.1 --privacy-clip 1.0
     ```
 
-### 5.4 The "Magic" (What happens next)
+### 6.4 The "Magic" (What happens next)
 1.  **Registration**: Both clients ping the server. Server sees "2/2 clients ready".
 2.  **Round 1 Start**: Server unlocks the global model.
 3.  **Download**: Clients download the ~300MB model file.
 4.  **Local Training**: Clients start their GPUs. You will see MMDetection logs (`Epoch [1][10/50] lr: ... loss: ...`).
-5.  **Upload**: Clients finish and POST their weights.
-6.  **Aggregation**: Server computes the average.
-7.  **Loop**: Process repeats for Round 2.
+5.  **Privacy**: Clients add noise to their weights.
+6.  **Upload**: Clients finish and POST their weights.
+7.  **Aggregation**: Server computes the average.
+8.  **Loop**: Process repeats for Round 2.
 
 ---
 
-## 6. Interpreting Results
+## 7. Interpreting Results
 
 After training, you run the evaluation script.
 
@@ -213,7 +234,7 @@ Evaluating with Perturbation: watermarks, Severity: 3
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 *   **Connection Refused**:
     *   Is the Server running?
@@ -226,7 +247,7 @@ Evaluating with Perturbation: watermarks, Severity: 3
 
 ---
 
-## 8. Credits & References
+## 9. Credits & References
 *   **Original Paper**: *RoDLA: Benchmarking the Robustness of Document Layout Analysis Models* (Chen et al., 2024).
 *   **Base Framework**: MMDetection (OpenMMLab).
 *   **Dataset**: PubLayNet (IBM).
