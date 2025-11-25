@@ -1,0 +1,5 @@
+we'll add docbank original dataset ive shared in group 
+format:
+imgs/
+text/
+train.json
