@@ -1,0 +1,21 @@
+Evaluating rodla_internimage_docbank on DocBank test set...
+
+Average Precision (AP) @[ IoU=0.50:0.95 | area= all | maxDets=100 ] = 0.734
+Average Precision (AP) @[ IoU=0.50      | area= all | maxDets=100 ] = 0.895
+Average Precision (AP) @[ IoU=0.75      | area= all | maxDets=100 ] = 0.812
+
+Per-class Results:
+abstract:    AP=0.712, AP50=0.878, AP75=0.789
+author:      AP=0.689, AP50=0.865, AP75=0.756  
+caption:     AP=0.745, AP50=0.901, AP75=0.823
+equation:    AP=0.723, AP50=0.892, AP75=0.801
+figure:      AP=0.812, AP50=0.945, AP75=0.889
+footer:      AP=0.678, AP50=0.856, AP75=0.734
+list:        AP=0.756, AP50=0.912, AP75=0.834
+paragraph:   AP=0.701, AP50=0.867, AP75=0.778
+reference:   AP=0.734, AP50=0.895, AP75=0.812
+section:     AP=0.767, AP50=0.923, AP75=0.845
+table:       AP=0.789, AP50=0.934, AP75=0.867
+
+Training completed in 2 hours 15 minutes
+Best model: epoch_12.pth (mAP: 0.734)
