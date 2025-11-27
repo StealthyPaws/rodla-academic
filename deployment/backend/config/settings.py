@@ -3,9 +3,9 @@ from pathlib import Path
 import sys
 
 # Repository paths
-REPO_ROOT = Path("/mnt/d/MyStuff/University/Current/CV/Project/RoDLA")
+REPO_ROOT = Path("/home/admin/CV/rodla-academic")
 MODEL_CONFIG_PATH = REPO_ROOT / "model/configs/m6doc/rodla_internimage_xl_m6doc.py"
-MODEL_WEIGHTS_PATH = REPO_ROOT / "rodla_internimage_xl_m6doc.pth"
+MODEL_WEIGHTS_PATH = REPO_ROOT / "finetuning_rodla/finetuning_rodla/checkpoints/rodla_internimage_xl_publaynet.pth"
 
 # Add to Python path
 sys.path.append(str(REPO_ROOT))
