@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoDLA - Document Layout Analysis [90s Edition]</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="scanlines"></div>
+    
+    <!-- Header -->
+    <div class="container">
+        <header class="header">
+            <h1 class="title">RoDLA</h1>
+            <p class="subtitle">>>> DOCUMENT LAYOUT ANALYSIS SYSTEM <<<</p>
+            <p class="version-text">[VERSION 2.1.0 - 90s EDITION]</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="section upload-section">
+                <h2 class="section-title">[::] UPLOAD DOCUMENT [::] </h2>
+                
+                <div class="upload-container">
+                    <div class="upload-box" id="dropZone">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text">DRAG & DROP YOUR IMAGE HERE</p>
+                        <p class="upload-subtext">or click to select</p>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    </div>
+                    <input type="file" id="fileInputHidden" accept="image/*" style="display: none;">
+                </div>
+
+                <!-- Image Preview -->
+                <div id="previewContainer" class="preview-container" style="display: none;">
+                    <div class="preview-label">[PREVIEW]</div>
+                    <img id="previewImage" src="" alt="Preview" class="preview-image">
+                    <div class="preview-info">
+                        <p id="fileName">Filename: N/A</p>
+                        <p id="fileSize">Size: N/A</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analysis Options -->
+            <section class="section options-section">
+                <h2 class="section-title">[::] ANALYSIS OPTIONS [::] </h2>
+                
+                <div class="options-container">
+                    <div class="option-group">
+                        <label class="label">CONFIDENCE THRESHOLD</label>
+                        <div class="input-group">
+                            <input type="range" id="confidenceThreshold" min="0" max="1" step="0.1" value="0.3" class="slider">
+                            <span class="value-display" id="thresholdValue">0.3</span>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <label class="label">DETECTION MODE</label>
+                        <div class="button-group">
+                            <button class="mode-btn active" data-mode="standard">STANDARD</button>
+                            <button class="mode-btn" data-mode="perturbation">PERTURBATION</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Perturbation Options (Hidden by default) -->
+                <div id="perturbationOptions" class="perturbation-options" style="display: none;">
+                    <div class="perturbation-title">[PERTURBATION TYPES]</div>
+                    <div class="perturbation-grid">
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="blur" checked> BLUR
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="noise" checked> NOISE
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="rotation" checked> ROTATION
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="scaling" checked> SCALING
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" value="perspective" checked> PERSPECTIVE
+                        </label>
+                    </div>
+
+                    <!-- Generate Perturbations Button -->
+                    <div class="perturbation-button-group">
+                        <button id="generatePerturbationsBtn" class="btn btn-secondary" style="margin-top: 15px;">
+                            [GENERATE PERTURBATIONS]
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Perturbations Preview Section -->
+            <section id="perturbationsPreviewSection" class="section" style="display: none;">
+                <h2 class="section-title">[::] PERTURBATIONS PREVIEW [::] </h2>
+                <div id="perturbationsPreviewContainer" class="perturbations-preview-container">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </section>
+
+            <!-- Action Buttons -->
+            <section class="section button-section">
+                <button id="analyzeBtn" class="btn btn-primary" disabled>
+                    [ANALYZE DOCUMENT]
+                </button>
+                <button id="resetBtn" class="btn btn-secondary">
+                    [CLEAR ALL]
+                </button>
+            </section>
+
+            <!-- Status Section -->
+            <section id="statusSection" class="section status-section" style="display: none;">
+                <div class="status-box">
+                    <p id="statusText" class="status-text">> INITIALIZING ANALYSIS...</p>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="section results-section" style="display: none;">
+                <h2 class="section-title">[::] ANALYSIS RESULTS [::] </h2>
+                
+                <div class="results-container">
+                    <!-- Annotated Image -->
+                    <div class="results-image-container">
+                        <div class="result-label">[ANNOTATED IMAGE]</div>
+                        <img id="resultImage" src="" alt="Analysis Result" class="result-image">
+                    </div>
+
+                    <!-- Detection Stats -->
+                    <div class="results-stats">
+                        <div class="stat-card">
+                            <div class="stat-title">DETECTIONS</div>
+                            <div class="stat-value" id="detectionCount">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">AVG CONFIDENCE</div>
+                            <div class="stat-value" id="avgConfidence">0.0%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">PROCESSING TIME</div>
+                            <div class="stat-value" id="processingTime">0ms</div>
+                        </div>
+                    </div>
+
+                    <!-- Class Distribution -->
+                    <div class="class-distribution">
+                        <div class="result-label">[CLASS DISTRIBUTION]</div>
+                        <div id="classChart" class="class-chart"></div>
+                    </div>
+
+                    <!-- Detections Table -->
+                    <div class="detections-table-container">
+                        <div class="result-label">[DETECTION DETAILS]</div>
+                        <table class="detections-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>CLASS</th>
+                                    <th>CONFIDENCE</th>
+                                    <th>BOX</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detectionsTableBody">
+                                <tr>
+                                    <td colspan="4" class="no-data">NO DATA</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Metrics -->
+                    <div class="metrics-container">
+                        <div class="result-label">[PERFORMANCE METRICS]</div>
+                        <div id="metricsBox" class="metrics-box"></div>
+                    </div>
+
+                    <!-- Download Options -->
+                    <div class="download-section">
+                        <button id="downloadImageBtn" class="btn btn-secondary">[DOWNLOAD IMAGE]</button>
+                        <button id="downloadJsonBtn" class="btn btn-secondary">[DOWNLOAD JSON]</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section id="errorSection" class="section error-section" style="display: none;">
+                <div class="error-box">
+                    <p class="error-title">[ERROR]</p>
+                    <p id="errorMessage" class="error-message">An error occurred</p>
+                    <button id="dismissErrorBtn" class="btn btn-secondary">[DISMISS]</button>
+                </div>
+            </section>
+
+            <!-- Model Info Section -->
+            <section class="section info-section">
+                <h2 class="section-title">[::] SYSTEM INFO [::] </h2>
+                <div class="info-box">
+                    <p><span class="label">MODEL:</span> RoDLA InternImage-XL</p>
+                    <p><span class="label">BACKBONE:</span> InternImage-XL</p>
+                    <p><span class="label">FRAMEWORK:</span> DINO with Channel Attention</p>
+                    <p><span class="label">DATASET:</span> M6Doc-P</p>
+                    <p><span class="label">STATUS:</span> <span class="status-online">● ONLINE</span></p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>RoDLA v2.1.0 | CVPR 2024 | Document Layout Analysis System</p>
+            <p class="footer-ascii">>>> [ 90s TERMINAL EDITION ] <<<</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
