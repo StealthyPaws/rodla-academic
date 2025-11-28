@@ -1,24 +1,20 @@
-<h1 align="center">🎮 RoDLA 90s Frontend</h1>
+<h1 align="center">RoDLA Finetuned for Academic Papers 📓</h1>
 <h3 align="center">Complete Project Documentation</h3>
 
 <p align="center">
-    <a href="#">
-        <img src="https://img.shields.io/badge/Frontend-90s_Terminal-green" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/badge/Backend-FastAPI-blue" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/badge/Model-InternImageXL-orange" />
-    </a>
-    <a href="#">
-        <img src="https://img.shields.io/badge/Edition-Retro_2.1-purple" />
-    </a>
+    <a href="https://arxiv.org/pdf/2403.14442.pdf">
+    <img src="https://img.shields.io/badge/PDF-arXiv-brightgreen" /></a>
+    <a href="https://yufanchen96.github.io/projects/RoDLA/">
+    <img src="https://img.shields.io/badge/Project-Homepage-red" /></a>
+    <a href="https://pytorch.org/get-started/previous-versions/#linux-and-windows">
+    <img src="https://img.shields.io/badge/Framework-PyTorch%201.10.2-orange" /></a>
+    <a href="https://github.com/yufanchen96/RoDLA/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" /></a>
 </p>
 
 ---
 
-## 📊 Project Analysis Summary
+## 🏡 Project Analysis Summary
 
 ### What is RoDLA?
 
@@ -33,6 +29,17 @@
 - Backbone: **InternImage-XL + DINO**
 
 ---
+
+## 📝 Catalog
+- [x] Perturbation Benchmark Dataset
+  - [x] PubLayNet-P
+  - [x] DocBank-P
+- [x] Perturbation Generation and Evaluation Code
+- [x] RoDLA Model Checkpoints
+- [x] RoDLA Model Training Code
+- [x] RoDLA Model Finetuning Code
+- [x] RoDLA Model Evaluation Code
+- [x] Frontend
 
 ## 🧩 System Architecture
 
@@ -83,7 +90,7 @@
 
 ---
 
-## 📁 Project Structure
+## 🔎 Project Structure
 
 ```
 rodla-academic/
@@ -146,7 +153,7 @@ https://drive.google.com/file/d/1BHyz2jH52Irt6izCeTRb4g2J5lXsA9cz/view
 
 ---
 
-## 🚀 Quick Start
+## 🌳 Quick Start
 
 ### Option 1: Automated Startup (Recommended)
 
