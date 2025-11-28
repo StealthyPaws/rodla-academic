@@ -26,14 +26,16 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code (excluding large files via .dockerignore)
 COPY . /app/
 
 # Create checkpoint directory
 RUN mkdir -p /app/finetuning_rodla/finetuning_rodla/checkpoints
 
-# Download model weights during build
-RUN python /app/deployment/backend/download_weights.py || echo "⚠️  Weight download script completed (may need manual download)"
+# Optional: Attempt to download weights at build time (non-blocking)
+# If download fails or times out, the backend will fall back to heuristic detection
+# Weights can be manually placed in: /app/finetuning_rodla/finetuning_rodla/checkpoints/rodla_internimage_xl_publaynet.pth
+RUN timeout 300 python /app/deployment/backend/download_weights.py 2>&1 || echo "⚠️  Weight download timed out or failed - backend will use heuristic detection. To enable full detection, manually place weights file in checkpoints directory."
 
 # Run backend.py on port 7860 (HuggingFace standard)
 CMD ["python", "deployment/backend/backend.py"]

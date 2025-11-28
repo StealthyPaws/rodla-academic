@@ -1,0 +1,65 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.tox
+
+# Virtual environments
+venv
+env
+.venv
+
+# IDE and editors
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+.directory
+
+# Large files that shouldn't be in Docker
+*.pth
+*.pt
+*.whl
+*.zip
+*.tar.gz
+
+# Test and log files
+*.log
+test_output
+*.tmp
+
+# Frontend dev
+node_modules
+npm-debug.log
+
+# Model outputs (will be generated at runtime)
+deployment/backend/outputs/
+model/work_dirs/
+model/result/
+
+# Documentation
+docs/
+*.md
+
+# Training data and models
+data/
+checkpoints/
+weights/
+
+# Assets
+assets/
+*.png
+*.jpg
+*.jpeg
