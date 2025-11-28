@@ -434,7 +434,7 @@ python3 -m http.server 8081
 - **Pre-training**: ImageNet-22K
 
 ### Training Data
-- **Primary**: M6Doc-P (perturbed M6Doc dataset)
+- **Primary**: PubLayNet (perturbed PubLayNet-P dataset)
 - **Test**: PubLayNet-P, DocLayNet-P (perturbed variants)
 - **Augmentation**: 450,000+ perturbed documents
 
