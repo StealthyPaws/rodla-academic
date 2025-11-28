@@ -1,27 +1,32 @@
-<h1 align="center">📓RoDLA</h1>
-<h3 align="center">Benchmarking the Robustness of Document Layout Analysis Models (CVPR'24)</h3>
+---
+title: RoDLA Document Layout Analysis
+emoji: 📄
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+app_file: app.py
+pinned: false
+---
 
-<p align="center">
-    <a href="https://arxiv.org/pdf/2403.14442.pdf">
-    <img src="https://img.shields.io/badge/PDF-arXiv-brightgreen" /></a>
-    <a href="https://yufanchen96.github.io/projects/RoDLA/">
-    <img src="https://img.shields.io/badge/Project-Homepage-red" /></a>
-    <a href="https://pytorch.org/get-started/previous-versions/#linux-and-windows">
-    <img src="https://img.shields.io/badge/Framework-PyTorch%201.10.2-orange" /></a>
-    <a href="https://github.com/yufanchen96/RoDLA/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" /></a>
-</p>
+# 📓 RoDLA: Robust Document Layout Analysis
+
+**Benchmarking the Robustness of Document Layout Analysis Models**
+
+This is an interactive deployment of the RoDLA Document Layout Analysis model with robustness testing capabilities.
 
 ## 🏡 Project Homepage
 
-This is the official repository for our CVPR 2024 paper **RoDLA:Benchmarking the Robustness of Document Layout Analysis Models**. For more result and benchmarking details, please visit our [project homepage](https://yufanchen96.github.io/projects/RoDLA/).
+This is the official repository for our CVPR 2024 paper **RoDLA: Benchmarking the Robustness of Document Layout Analysis Models**. For more result and benchmarking details, please visit our [project homepage](https://yufanchen96.github.io/projects/RoDLA/).
+
+**Links:**
+- 📄 [Paper](https://arxiv.org/pdf/2403.14442.pdf)
+- 🌐 [Project Homepage](https://yufanchen96.github.io/projects/RoDLA/)
+- 📦 [GitHub Repository](https://github.com/yufanchen96/RoDLA)
     
 ## 🔎 Introduction
 We introduce **RoDLA** that aims to benchmark the robustness of Document Layout Analysis (DLA) models. RoDLA is a large-scale benchmark that contains **450,000**+ documents with diverse layouts and contents. 
 We also provide a set of evaluation metrics to facilitate the comparison of different DLA models. We hope that RoDLA can serve as a standard benchmark for the robustness evaluation of DLA models.
-<p align="center">
-    <img src="assets/benchmark_v2.png" width="360" />
-</p>
 
 ## 📝 Catalog
 - [x] Perturbation Benchmark Dataset
