@@ -29,8 +29,15 @@ import uvicorn
 
 class Config:
     """Global configuration"""
+    import os
+    
     API_PORT = 8000
-    REPO_ROOT = Path("/home/admin/CV/rodla-academic")
+    # Get repo root dynamically - works on any system
+    if os.path.exists("/app"):
+        REPO_ROOT = Path("/app")
+    else:
+        REPO_ROOT = Path(__file__).parent.parent.parent
+    
     MODEL_CONFIG_PATH = REPO_ROOT / "model/configs/m6doc/rodla_internimage_xl_m6doc.py"
     MODEL_WEIGHTS_PATH = REPO_ROOT / "finetuning_rodla/finetuning_rodla/checkpoints/rodla_internimage_xl_publaynet.pth"
     PERTURBATIONS_DIR = REPO_ROOT / "deployment/backend/perturbations"
