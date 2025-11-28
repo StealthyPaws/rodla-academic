@@ -3,8 +3,24 @@
    Falls back to demo data if backend unavailable
    ============================================ */
 
-// Configuration
-const API_BASE_URL = 'http://localhost:8000/api';
+// Configuration - dynamically detect API base URL
+// Works with: localhost:8000, localhost:7860, HuggingFace Spaces, etc.
+const getAPIBaseURL = () => {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port;
+    
+    // On HuggingFace Spaces or same-origin deployment
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development - try both ports
+        return `${protocol}//${hostname}:8000/api`;
+    } else {
+        // HuggingFace Spaces or production - use same origin
+        return `${protocol}//${hostname}:${port}/api`;
+    }
+};
+
+const API_BASE_URL = getAPIBaseURL();
 let currentMode = 'standard';
 let currentFile = null;
 let lastResults = null;
@@ -16,6 +32,7 @@ let demoMode = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[RODLA] System initialized...');
+    console.log('[RODLA] API Base URL:', API_BASE_URL);
     setupEventListeners();
     checkBackendStatus();
 });

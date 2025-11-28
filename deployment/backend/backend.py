@@ -20,6 +20,7 @@ import cv2
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 
@@ -41,6 +42,7 @@ class Config:
     MODEL_CONFIG_PATH = REPO_ROOT / "model/configs/m6doc/rodla_internimage_xl_m6doc.py"
     MODEL_WEIGHTS_PATH = REPO_ROOT / "finetuning_rodla/finetuning_rodla/checkpoints/rodla_internimage_xl_publaynet.pth"
     PERTURBATIONS_DIR = REPO_ROOT / "deployment/backend/perturbations"
+    FRONTEND_DIR = REPO_ROOT / "frontend"
     
     # Automatically use GPU if available, otherwise CPU
     @staticmethod
@@ -79,6 +81,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount frontend static files
+if Config.FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(Config.FRONTEND_DIR), html=True), name="frontend")
+else:
+    print(f"⚠️  Frontend directory not found: {Config.FRONTEND_DIR}")
+
+
+# ============================================================================
+# Root endpoint
+# ============================================================================
+
+@app.get("/")
+async def root():
+    """Root endpoint - serve index.html"""
+    if (Config.FRONTEND_DIR / "index.html").exists():
+        with open(Config.FRONTEND_DIR / "index.html", "r") as f:
+            return {"message": "Frontend served - navigate to the web interface"}
+    return {
+        "title": "RoDLA Document Layout Analysis API",
+        "message": "API is running. Frontend files not found.",
+        "endpoints": {
+            "detection": "/api/detect",
+            "health": "/api/health",
+            "model_info": "/api/model-info",
+            "perturbations": "/api/perturbations/info"
+        }
+    }
 
 
 # ============================================================================
