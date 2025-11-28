@@ -294,14 +294,12 @@ def load_model():
     try:
         print("⏳ Setting up model environment...")
         import torch
-        
-        # Import and use DINO registration helper
-        from register_dino import try_load_with_dino_registration
+        from mmdet.apis import init_detector
         
         print("⏳ Loading model from weights (this will take ~30-60 seconds)...")
         print("   File: 3.8GB checkpoint...")
         
-        model = try_load_with_dino_registration(
+        model = init_detector(
             str(Config.MODEL_CONFIG_PATH),
             str(Config.MODEL_WEIGHTS_PATH),
             device=model_state["device"]
