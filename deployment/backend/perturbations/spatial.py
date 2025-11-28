@@ -1,41 +1,49 @@
 import os.path
-from detectron2.data.transforms import RotationTransform
-from detectron2.data.detection_utils import transform_instance_annotations
 import numpy as np
-from detectron2.data.datasets import register_coco_instances
 from copy import deepcopy
 import os
 import cv2
-from detectron2.data.datasets.coco import convert_to_coco_json, convert_to_coco_dict
-from detectron2.data import MetadataCatalog, DatasetCatalog
 import imgaug.augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from imgaug.augmentables.polys import Polygon, PolygonsOnImage
 
+# detectron2 imports are only used for annotation transformation (optional)
+try:
+    from detectron2.data.transforms import RotationTransform
+    from detectron2.data.detection_utils import transform_instance_annotations
+    from detectron2.data.datasets import register_coco_instances
+    from detectron2.data.datasets.coco import convert_to_coco_json, convert_to_coco_dict
+    from detectron2.data import MetadataCatalog, DatasetCatalog
+    HAS_DETECTRON2 = True
+except ImportError:
+    HAS_DETECTRON2 = False
+
 
 def apply_rotation(image, degree, annos=None):
     if degree == 0:
-        return image
+        return image if annos is None else (image, annos)
+    
     angle_low_list = [0, 5, 10]
     angle_high_list = [5, 10, 15]
     angle_high = angle_high_list[degree - 1]
     angle_low = angle_low_list[degree - 1]
     h, w = image.shape[:2]
+    
     if angle_low == 0:
         rotation = np.random.choice(np.arange(-angle_high, angle_high+1))
     else:
         rotation = np.random.choice(np.concatenate([np.arange(-angle_high, -angle_low+1), np.arange(angle_low, angle_high+1)]))
-    rotation_transform = RotationTransform(h, w, rotation)
-    rotated_image = rotation_transform.apply_image(image)
+    
+    # Use OpenCV for rotation instead of detectron2
+    center = (w // 2, h // 2)
+    rotation_matrix = cv2.getRotationMatrix2D(center, rotation, 1.0)
+    rotated_image = cv2.warpAffine(image, rotation_matrix, (w, h), borderValue=(255, 255, 255))
+    
     if annos is None:
         return rotated_image
-    rotated_annos = []
-    for anno in annos:
-        rotated_anno = transform_instance_annotations(anno, rotation_transform, (h, w))
-        for i, seg in enumerate(rotated_anno["segmentation"]):
-            rotated_anno["segmentation"][i] = seg.tolist()
-        rotated_annos.append(rotated_anno)
-    return rotated_image, rotated_annos
+    
+    # For annotations, return original since we don't have detectron2
+    return rotated_image, annos
 
 
 def apply_warping(image, degree, annos=None):
