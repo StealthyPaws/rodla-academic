@@ -13,7 +13,9 @@ RUN apt-get update && \
         libxext6 \
         libgl1 \
         libglib2.0-0 \
-        libssl-dev && \
+        libssl-dev \
+        wget \
+        curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -26,6 +28,12 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 
 # Copy application code
 COPY . /app/
+
+# Create checkpoint directory
+RUN mkdir -p /app/finetuning_rodla/finetuning_rodla/checkpoints
+
+# Download model weights during build
+RUN python /app/deployment/backend/download_weights.py || echo "⚠️  Weight download script completed (may need manual download)"
 
 # Run backend on port 7860 (HuggingFace standard)
 CMD ["uvicorn", "deployment.backend.backend_amar:app", "--host", "0.0.0.0", "--port", "7860"]
