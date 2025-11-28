@@ -16,7 +16,6 @@ RUN apt-get update && \
         libgl1 \
         libglib2.0-0 \
         libssl-dev \
-        libcuda-dev \
         wget \
         curl && \
     apt-get clean && \
