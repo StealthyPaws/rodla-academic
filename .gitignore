@@ -37,6 +37,16 @@ MANIFEST
 # Amar Files:
 rodla_internimage_xl_m6doc.pth
 
+# Model weights and checkpoints - DO NOT COMMIT
+*.pth
+*.pt
+*.ckpt
+*.weights
+*.pkl
+*.pickle
+checkpoints/
+weights/
+trained_models/
 
 # Installer logs
 pip-log.txt
