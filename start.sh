@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Header
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║        RoDLA DOCUMENT LAYOUT ANALYSIS - 90s Edition      ║${NC}"
+echo -e "${BLUE}║        RoDLA DOCUMENT LAYOUT ANALYSIS                      ║${NC}"
 echo -e "${BLUE}║            Startup Script (Frontend + Backend)           ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
 echo ""
