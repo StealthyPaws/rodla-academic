@@ -56,12 +56,30 @@ function setupEventListeners() {
             btn.classList.add('active');
             currentMode = btn.dataset.mode;
             
-            // Toggle perturbation options
+            // Toggle perturbation options and hint
             const pertOptions = document.getElementById('perturbationOptions');
+            const modeHint = document.getElementById('modeHint');
+            const standardModeHint = document.getElementById('standardModeHint');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
             if (currentMode === 'perturbation') {
+                // PERTURBATION MODE - allow analysis of original or perturbation images
                 pertOptions.style.display = 'block';
+                modeHint.style.display = 'block';
+                standardModeHint.style.display = 'none';
+                analyzeBtn.style.opacity = currentFile ? '1' : '0.5';
+                analyzeBtn.style.cursor = currentFile ? 'pointer' : 'not-allowed';
+                analyzeBtn.disabled = !currentFile;
+                analyzeBtn.title = 'Click to generate perturbations, then click on any image to analyze it';
             } else {
+                // STANDARD MODE
                 pertOptions.style.display = 'none';
+                modeHint.style.display = 'none';
+                standardModeHint.style.display = 'block';
+                analyzeBtn.style.opacity = currentFile ? '1' : '0.5';
+                analyzeBtn.style.cursor = currentFile ? 'pointer' : 'not-allowed';
+                analyzeBtn.disabled = !currentFile;
+                analyzeBtn.title = 'Click to analyze the document layout';
             }
         });
     });
@@ -98,7 +116,12 @@ function handleFileSelect(file) {
 
     currentFile = file;
     showPreview(file);
-    document.getElementById('analyzeBtn').disabled = false;
+    
+    // Enable analyze button only if in standard mode
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    if (currentMode === 'standard') {
+        analyzeBtn.disabled = false;
+    }
 }
 
 function showPreview(file) {
@@ -134,39 +157,6 @@ async function handleAnalysis() {
 
     try {
         const startTime = Date.now();
-        const results = await runAnalysis();
-        const processingTime = Date.now() - startTime;
-
-        lastResults = {
-            ...results,
-            processingTime: processingTime,
-            timestamp: new Date().toISOString(),
-            mode: currentMode,
-            fileName: currentFile.name
-        };
-
-        displayResults(results, processingTime);
-        hideStatus();
-    } catch (error) {
-        console.error('[ERROR]', error);
-        showError(`Analysis failed: ${error.message}`);
-        hideStatus();
-    }
-}
-
-async function handleAnalysis() {
-    if (!currentFile) {
-        showError('Please select an image first.');
-        return;
-    }
-
-    const analysisType = currentMode === 'standard' ? 'Standard Detection' : 'Perturbation Analysis';
-    updateStatus(`> INITIATING ${analysisType.toUpperCase()}...`);
-    showStatus();
-    hideError();
-
-    try {
-        const startTime = Date.now();
         let results;
         
         if (demoMode) {
@@ -178,8 +168,12 @@ async function handleAnalysis() {
         
         const processingTime = Date.now() - startTime;
 
+        // Read original image as base64 for annotation
+        const originalImageBase64 = await readFileAsBase64(currentFile);
+
         lastResults = {
             ...results,
+            original_image: originalImageBase64,
             processingTime: processingTime,
             timestamp: new Date().toISOString(),
             mode: currentMode,
@@ -202,36 +196,72 @@ async function runAnalysis() {
     const threshold = parseFloat(document.getElementById('confidenceThreshold').value);
     formData.append('score_threshold', threshold);
 
-    if (currentMode === 'perturbation') {
-        // Get selected perturbation types
-        const perturbationTypes = [];
-        document.querySelectorAll('.checkbox-label input[type="checkbox"]:checked').forEach(checkbox => {
-            perturbationTypes.push(checkbox.value);
-        });
+    // Only standard detection mode
+    updateStatus('> RUNNING STANDARD DETECTION...');
+    return await fetch(`${API_BASE_URL}/detect`, {
+        method: 'POST',
+        body: formData
+    }).then(r => {
+        if (!r.ok) throw new Error(`API Error: ${r.status}`);
+        return r.json();
+    });
+}
 
-        if (perturbationTypes.length === 0) {
-            throw new Error('Please select at least one perturbation type.');
-        }
+async function analyzePerturbationImage(imageBase64, perturbationType, degree) {
+    // Analyze a specific perturbation image
+    updateStatus(`> ANALYZING ${perturbationType.toUpperCase()} (DEGREE ${degree})...`);
+    showStatus();
+    hideError();
 
-        formData.append('perturbation_types', perturbationTypes.join(','));
+    try {
+        const startTime = Date.now();
         
-        updateStatus('> APPLYING PERTURBATIONS...');
-        return await fetch(`${API_BASE_URL}/detect-with-perturbation`, {
+        // Convert base64 to blob and create file
+        const binaryString = atob(imageBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'image/png' });
+        const file = new File([blob], `${perturbationType}_degree_${degree}.png`, { type: 'image/png' });
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', file);
+        const threshold = parseFloat(document.getElementById('confidenceThreshold').value);
+        formData.append('score_threshold', threshold);
+        
+        // Send to backend
+        const response = await fetch(`${API_BASE_URL}/detect`, {
             method: 'POST',
             body: formData
-        }).then(r => {
-            if (!r.ok) throw new Error(`API Error: ${r.status}`);
-            return r.json();
         });
-    } else {
-        updateStatus('> RUNNING STANDARD DETECTION...');
-        return await fetch(`${API_BASE_URL}/detect`, {
-            method: 'POST',
-            body: formData
-        }).then(r => {
-            if (!r.ok) throw new Error(`API Error: ${r.status}`);
-            return r.json();
-        });
+        
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+        
+        const results = await response.json();
+        const processingTime = Date.now() - startTime;
+        
+        // Store results with perturbation info
+        lastResults = {
+            ...results,
+            original_image: imageBase64,
+            processingTime: processingTime,
+            timestamp: new Date().toISOString(),
+            mode: 'perturbation',
+            perturbation_type: perturbationType,
+            perturbation_degree: degree,
+            fileName: `${perturbationType}_degree_${degree}.png`
+        };
+        
+        displayResults(results, processingTime);
+        hideStatus();
+    } catch (error) {
+        console.error('[ERROR]', error);
+        showError(`Perturbation analysis failed: ${error.message}`);
+        hideStatus();
     }
 }
 
@@ -291,16 +321,27 @@ function displayPerturbations(results) {
     }
     
     let html = `<div style="font-size: 0.9em; color: #00FFFF; margin-bottom: 15px; padding: 10px; border: 1px dashed #00FFFF;">
-        TOTAL: 12 Perturbation Types × 3 Degree Levels (1=Mild, 2=Moderate, 3=Severe)
+        TOTAL: 12 Perturbation Types × 3 Degree Levels (1=Mild, 2=Moderate, 3=Severe) - CLICK ON ANY IMAGE TO ANALYZE
     </div>`;
 
+    // Store all perturbation images for clickable analysis
+    const perturbationImages = [];
+
     // Add original
+    perturbationImages.push({
+        name: 'original',
+        image: results.perturbations.original.original
+    });
+    
     html += `
         <div class="perturbation-grid-section">
             <div class="perturbation-type-label">[ORIGINAL IMAGE]</div>
             <div style="padding: 10px;">
                 <img src="data:image/png;base64,${results.perturbations.original.original}" 
-                     alt="Original" class="perturbation-preview-image" style="width: 200px; height: auto;">
+                     alt="Original" class="perturbation-preview-image" 
+                     data-perturbation="original" data-degree="0"
+                     style="width: 200px; height: auto; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;" 
+                     title="Click to analyze this image">
             </div>
         </div>
     `;
@@ -337,13 +378,24 @@ function displayPerturbations(results) {
                     const degreeLabel = ['MILD', 'MODERATE', 'SEVERE'][degree - 1];
                     
                     if (results.perturbations[ptype][degreeKey]) {
+                        perturbationImages.push({
+                            name: ptype,
+                            degree: degree,
+                            image: results.perturbations[ptype][degreeKey]
+                        });
+                        
                         html += `
                             <div style="text-align: center;">
                                 <div style="color: #00FFFF; font-size: 0.8em; margin-bottom: 5px;">DEG ${degree}: ${degreeLabel}</div>
                                 <img src="data:image/png;base64,${results.perturbations[ptype][degreeKey]}" 
                                      alt="${ptype} degree ${degree}" 
                                      class="perturbation-preview-image"
-                                     style="width: 150px; height: auto; border: 1px solid #008080; padding: 2px;">
+                                     data-perturbation="${ptype}"
+                                     data-degree="${degree}"
+                                     style="width: 150px; height: auto; border: 2px solid #008080; padding: 2px; cursor: pointer; transition: all 0.2s;" 
+                                     title="Click to analyze this perturbation"
+                                     onmouseover="this.style.borderColor='#00FF00'; this.style.boxShadow='0 0 10px #00FF00';"
+                                     onmouseout="this.style.borderColor='#008080'; this.style.boxShadow='none';">
                             </div>
                         `;
                     }
@@ -357,6 +409,33 @@ function displayPerturbations(results) {
     });
 
     container.innerHTML = html;
+    
+    // Add click handlers to perturbation images
+    const perturbationImgs = container.querySelectorAll('[data-perturbation]');
+    perturbationImgs.forEach(img => {
+        img.addEventListener('click', async function() {
+            const perturbationType = this.dataset.perturbation;
+            const degree = this.dataset.degree;
+            
+            // Find the image data
+            let imageBase64 = null;
+            if (perturbationType === 'original') {
+                imageBase64 = results.perturbations.original.original;
+            } else {
+                const degreeKey = `degree_${degree}`;
+                imageBase64 = results.perturbations[perturbationType][degreeKey];
+            }
+            
+            if (!imageBase64) {
+                showError('Failed to load image for analysis');
+                return;
+            }
+            
+            // Convert base64 to File object and analyze
+            await analyzePerturbationImage(imageBase64, perturbationType, degree);
+        });
+    });
+    
     section.style.display = 'block';
     section.scrollIntoView({ behavior: 'smooth' });
 }
@@ -376,11 +455,17 @@ function displayResults(results, processingTime) {
 
     document.getElementById('detectionCount').textContent = detections.length;
     document.getElementById('avgConfidence').textContent = `${avgConfidence}%`;
-    document.getElementById('processingTime').textContent = `${processingTime}ms`;
+    document.getElementById('processingTime').textContent = `${processingTime.toFixed(0)}ms`;
 
-    // Display image
-    if (results.annotated_image) {
-        document.getElementById('resultImage').src = `data:image/png;base64,${results.annotated_image}`;
+    // Draw annotated image with bounding boxes
+    if (lastResults && lastResults.original_image) {
+        drawAnnotatedImage(lastResults.original_image, detections, results.image_width, results.image_height);
+    } else {
+        // Fallback: try to use previewImage
+        const previewImg = document.getElementById('previewImage');
+        if (previewImg && previewImg.src) {
+            drawAnnotatedImageFromSrc(previewImg.src, detections, results.image_width, results.image_height);
+        }
     }
 
     // Class distribution
@@ -390,11 +475,112 @@ function displayResults(results, processingTime) {
     displayDetectionsTable(detections);
 
     // Metrics
-    displayMetrics(results.metrics || {});
+    displayMetrics(results, processingTime);
 
     // Show results section
     document.getElementById('resultsSection').style.display = 'block';
     document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function drawAnnotatedImage(imageBase64, detections, imgWidth, imgHeight) {
+    // Draw bounding boxes on image and display
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Load image
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // Draw bounding boxes
+        detections.forEach((det, idx) => {
+            const bbox = det.bbox || {};
+            
+            // Convert normalized coordinates to pixel coordinates
+            const x = bbox.x * img.width;
+            const y = bbox.y * img.height;
+            const w = bbox.width * img.width;
+            const h = bbox.height * img.height;
+            
+            // Draw box
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+            
+            // Draw label
+            const label = `${det.class_name || 'Unknown'} (${(det.confidence * 100).toFixed(1)}%)`;
+            const fontSize = Math.max(12, Math.min(18, Math.floor(img.height / 30)));
+            ctx.font = `bold ${fontSize}px monospace`;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(x, y - fontSize - 5, ctx.measureText(label).width + 10, fontSize + 5);
+            ctx.fillStyle = '#00FF00';
+            ctx.fillText(label, x + 5, y - 5);
+        });
+        
+        // Display canvas as image
+        const resultImage = document.getElementById('resultImage');
+        resultImage.src = canvas.toDataURL('image/png');
+        resultImage.style.display = 'block';
+    };
+    
+    img.src = `data:image/png;base64,${imageBase64}`;
+}
+
+function drawAnnotatedImageFromSrc(imageSrc, detections, imgWidth, imgHeight) {
+    // Draw bounding boxes on image from data URL
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        // Draw bounding boxes with colors based on class
+        const colors = ['#00FF00', '#00FFFF', '#FF00FF', '#FFFF00', '#FF6600', '#00FF99'];
+        
+        detections.forEach((det, idx) => {
+            const bbox = det.bbox || {};
+            
+            // Convert normalized coordinates to pixel coordinates
+            const x = bbox.x * img.width;
+            const y = bbox.y * img.height;
+            const w = bbox.width * img.width;
+            const h = bbox.height * img.height;
+            
+            // Select color
+            const color = colors[idx % colors.length];
+            
+            // Draw box
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+            
+            // Draw label background
+            const label = `${idx + 1}. ${det.class_name || 'Unknown'} (${(det.confidence * 100).toFixed(1)}%)`;
+            const fontSize = 14;
+            ctx.font = `bold ${fontSize}px monospace`;
+            const textWidth = ctx.measureText(label).width;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(x, y - fontSize - 8, textWidth + 8, fontSize + 6);
+            ctx.fillStyle = color;
+            ctx.fillText(label, x + 4, y - 4);
+        });
+        
+        // Display canvas as image
+        const resultImage = document.getElementById('resultImage');
+        resultImage.src = canvas.toDataURL('image/png');
+        resultImage.style.display = 'block';
+        resultImage.style.maxWidth = '100%';
+        resultImage.style.height = 'auto';
+        resultImage.style.border = '2px solid #00FF00';
+    };
+    
+    img.src = imageSrc;
 }
 
 function displayClassDistribution(distribution) {
@@ -429,30 +615,44 @@ function displayDetectionsTable(detections) {
     const tbody = document.getElementById('detectionsTableBody');
     
     if (detections.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="no-data">NO DETECTIONS</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">NO DETECTIONS</td></tr>';
         return;
     }
 
     let html = '';
     detections.slice(0, 50).forEach((det, idx) => {
-        const box = det.box || {};
-        const x1 = box.x1 ? box.x1.toFixed(0) : '?';
-        const y1 = box.y1 ? box.y1.toFixed(0) : '?';
-        const x2 = box.x2 ? box.x2.toFixed(0) : '?';
-        const y2 = box.y2 ? box.y2.toFixed(0) : '?';
+        // Handle different bbox formats
+        const bbox = det.bbox || det.box || {};
+        
+        // Convert normalized coordinates to pixel coordinates
+        let x = '?', y = '?', w = '?', h = '?';
+        if (bbox.x !== undefined && bbox.y !== undefined && bbox.width !== undefined && bbox.height !== undefined) {
+            x = bbox.x.toFixed(3);
+            y = bbox.y.toFixed(3);
+            w = bbox.width.toFixed(3);
+            h = bbox.height.toFixed(3);
+        } else if (bbox.x1 !== undefined && bbox.y1 !== undefined && bbox.x2 !== undefined && bbox.y2 !== undefined) {
+            x = bbox.x1.toFixed(0);
+            y = bbox.y1.toFixed(0);
+            w = (bbox.x2 - bbox.x1).toFixed(0);
+            h = (bbox.y2 - bbox.y1).toFixed(0);
+        }
+        
+        const className = det.class_name || det.class || 'Unknown';
+        const confidence = det.confidence ? (det.confidence * 100).toFixed(1) : '0.0';
         
         html += `
             <tr>
                 <td>${idx + 1}</td>
-                <td>${det.class || 'Unknown'}</td>
-                <td>${(det.confidence * 100).toFixed(1)}%</td>
-                <td>[${x1},${y1},${x2},${y2}]</td>
+                <td>${className}</td>
+                <td>${confidence}%</td>
+                <td title="x: ${x}, y: ${y}, w: ${w}, h: ${h}">[${x.substring(0,5)}, ${y.substring(0,5)}, ${w.substring(0,5)}, ${h.substring(0,5)}]</td>
             </tr>
         `;
     });
 
     if (detections.length > 50) {
-        html += `<tr><td colspan="4" class="no-data">... and ${detections.length - 50} more</td></tr>`;
+        html += `<tr><td colspan="5" class="no-data">... and ${detections.length - 50} more</td></tr>`;
     }
 
     tbody.innerHTML = html;
@@ -657,6 +857,77 @@ async function checkBackendStatus() {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            // Extract base64 data without the data:image/png;base64, prefix
+            const base64 = result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function displayMetrics(results, processingTime) {
+    const metricsDiv = document.getElementById('metricsBox');
+    if (!metricsDiv) return;
+
+    const detections = results.detections || [];
+    const confidences = detections.map(d => d.confidence || 0);
+    const avgConfidence = confidences.length > 0 
+        ? (confidences.reduce((a, b) => a + b) / confidences.length * 100).toFixed(1)
+        : 0;
+    const maxConfidence = confidences.length > 0 
+        ? (Math.max(...confidences) * 100).toFixed(1)
+        : 0;
+    const minConfidence = confidences.length > 0 
+        ? (Math.min(...confidences) * 100).toFixed(1)
+        : 0;
+
+    // Determine detection mode
+    let detectionMode = 'HEURISTIC (CPU Fallback)';
+    let modelType = 'Heuristic Layout Detection';
+    
+    if (results.detection_mode === 'mmdet') {
+        detectionMode = 'MMDET Neural Network';
+        modelType = 'DINO (InternImage-XL)';
+    }
+
+    const metricsHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">DETECTION MODE</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${detectionMode}</div>
+            </div>
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">MODEL TYPE</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${modelType}</div>
+            </div>
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">PROCESSING TIME</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${processingTime.toFixed(0)}ms</div>
+            </div>
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">AVG CONFIDENCE</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${avgConfidence}%</div>
+            </div>
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">MAX CONFIDENCE</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${maxConfidence}%</div>
+            </div>
+            <div style="background: #1a1a1a; border: 2px solid #00FF00; border-radius: 4px; padding: 12px;">
+                <div style="color: #00FFFF; font-size: 12px; font-weight: bold;">MIN CONFIDENCE</div>
+                <div style="color: #00FF00; font-size: 14px; margin-top: 4px;">${minConfidence}%</div>
+            </div>
+        </div>
+    `;
+
+    metricsDiv.innerHTML = metricsHTML;
+}
 
 console.log('[RODLA] Frontend loaded successfully. Ready for analysis.');
 console.log('[RODLA] Demo mode available if backend is unavailable.');

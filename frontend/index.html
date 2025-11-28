@@ -106,12 +106,18 @@
 
             <!-- Action Buttons -->
             <section class="section button-section">
-                <button id="analyzeBtn" class="btn btn-primary" disabled>
+                <button id="analyzeBtn" class="btn btn-primary" disabled title="(1) Upload image, (2) Make sure STANDARD mode is selected">
                     [ANALYZE DOCUMENT]
                 </button>
                 <button id="resetBtn" class="btn btn-secondary">
                     [CLEAR ALL]
                 </button>
+                <p id="modeHint" class="mode-hint" style="display: none; color: #00FF00; margin-top: 10px; font-size: 12px;">
+                    >>> Use [GENERATE PERTURBATIONS] button above to analyze with perturbations
+                </p>
+                <p id="standardModeHint" class="mode-hint" style="color: #00FF00; margin-top: 5px; font-size: 12px;">
+                    >>> STANDARD MODE: Upload an image and click [ANALYZE DOCUMENT] to detect layout
+                </p>
             </section>
 
             <!-- Status Section -->

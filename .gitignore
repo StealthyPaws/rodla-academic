@@ -37,6 +37,31 @@ MANIFEST
 # Amar Files:
 rodla_internimage_xl_m6doc.pth
 
+# Model weights and checkpoints - DO NOT COMMIT
+*.pth
+*.pt
+*.ckpt
+*.weights
+*.pkl
+*.pickle
+checkpoints/
+weights/
+trained_models/
+
+# Binary files - HuggingFace doesn't allow
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.whl
+*.tar.gz
+*.zip
+assets/
+deployment/backend/outputs/
+*.tar.gz
+rodla-env.tar.gz
+annotated_*
 
 # Installer logs
 pip-log.txt
