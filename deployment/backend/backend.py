@@ -31,7 +31,7 @@ class Config:
     """Global configuration"""
     import os
     
-    API_PORT = 8000
+    API_PORT = 7860  # HuggingFace Spaces standard port
     # Get repo root dynamically - works on any system
     if os.path.exists("/app"):
         REPO_ROOT = Path("/app")

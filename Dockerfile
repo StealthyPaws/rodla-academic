@@ -35,5 +35,5 @@ RUN mkdir -p /app/finetuning_rodla/finetuning_rodla/checkpoints
 # Download model weights during build
 RUN python /app/deployment/backend/download_weights.py || echo "⚠️  Weight download script completed (may need manual download)"
 
-# Run backend on port 7860 (HuggingFace standard)
-CMD ["uvicorn", "deployment.backend.backend_amar:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run backend.py on port 7860 (HuggingFace standard)
+CMD ["python", "deployment/backend/backend.py"]
