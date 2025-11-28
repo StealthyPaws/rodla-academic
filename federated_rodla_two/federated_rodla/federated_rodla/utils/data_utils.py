@@ -10,572 +10,281 @@ import cv2
 from typing import Dict, List, Optional, Tuple
 import os
 import logging
+import logging
+from PIL import Image
+from typing import Dict, List, Optional, Tuple
+import io
+import base64
+import numpy as np
+import torch # Added for FederatedDataConverter
+from mmcv import Config # Added for FederatedDataConverter
+from mmdet.datasets.pipelines import Compose # Added for FederatedDataConverter
+
 
 logger = logging.getLogger(__name__)
 
 class DataUtils:
-    """Utility class for handling federated data processing"""
+    """Utility class for handling various data processing, now focused on utility for FL and robustness."""
     
     @staticmethod
-    def encode_image_to_base64(image: Image.Image, format: str = "JPEG", quality: int = 85) -> str:
-        """
-        Encode PIL Image to base64 string
-        
-        Args:
-            image: PIL Image object
-            format: Image format (JPEG, PNG)
-            quality: JPEG quality (1-100)
-            
-        Returns:
-            base64 encoded string
-        """
-        try:
-            buffered = io.BytesIO()
-            image.save(buffered, format=format, quality=quality)
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-            return img_str
-        except Exception as e:
-            logger.error(f"Error encoding image to base64: {e}")
-            return ""
-    
+    def encode_image_to_base64(image: Image.Image) -> str:
+        """Encodes a PIL Image to a base64 string."""
+        buffered = io.BytesIO()
+        # Ensure image is in RGB mode for JPEG encoding
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image.save(buffered, format="JPEG")
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
     @staticmethod
-    def decode_base64_to_image(image_data: str) -> Optional[Image.Image]:
-        """
-        Decode base64 string to PIL Image
-        
-        Args:
-            image_data: base64 encoded image string
-            
-        Returns:
-            PIL Image or None if decoding fails
-        """
-        try:
-            if isinstance(image_data, str):
-                image_bytes = base64.b64decode(image_data)
-            else:
-                image_bytes = image_data
-                
-            image = Image.open(io.BytesIO(image_bytes))
-            return image.convert('RGB')  # Ensure RGB format
-        except Exception as e:
-            logger.error(f"Error decoding base64 to image: {e}")
-            return None
-    
+    def decode_base64_to_image(image_data: str) -> Image.Image:
+        """Decodes a base64 string back to a PIL Image."""
+        image_bytes = base64.b64decode(image_data)
+        return Image.open(io.BytesIO(image_bytes))
+
     @staticmethod
-    def tensor_to_pil(tensor: torch.Tensor, denormalize: bool = True) -> Image.Image:
-        """
-        Convert torch tensor to PIL Image
+    def tensor_to_pil(img_tensor: torch.Tensor, img_norm_cfg: Optional[Dict] = None) -> Image.Image:
+        """Converts a normalized PyTorch tensor (C, H, W) to a PIL Image (RGB)."""
+        img_np = img_tensor.cpu().numpy()
         
-        Args:
-            tensor: Image tensor [C, H, W]
-            denormalize: Whether to reverse ImageNet normalization
-            
-        Returns:
-            PIL Image
-        """
-        try:
-            # Detach and convert to numpy
-            if tensor.requires_grad:
-                tensor = tensor.detach()
-            
-            # Move to CPU and convert to numpy
-            tensor = tensor.cpu().numpy()
-            
-            # Handle different tensor shapes
-            if tensor.shape[0] == 3:  # [C, H, W]
-                img_np = tensor.transpose(1, 2, 0)
-            else:  # [H, W, C]
-                img_np = tensor
-            
-            # Denormalize if needed (reverse ImageNet normalization)
-            if denormalize:
-                mean = np.array([123.675, 116.28, 103.53])
-                std = np.array([58.395, 57.12, 57.375])
-                img_np = img_np * std + mean
-            
-            # Clip and convert to uint8
-            img_np = np.clip(img_np, 0, 255).astype(np.uint8)
-            
-            return Image.fromarray(img_np)
-        except Exception as e:
-            logger.error(f"Error converting tensor to PIL: {e}")
-            # Return a blank image as fallback
-            return Image.new('RGB', (224, 224), color='white')
-    
+        if img_norm_cfg:
+            mean = np.array(img_norm_cfg['mean']).reshape(3, 1, 1)
+            std = np.array(img_norm_cfg['std']).reshape(3, 1, 1)
+            img_np = (img_np * std + mean) # Denormalize
+        
+        img_np = img_np.transpose(1, 2, 0).astype(np.uint8) # C, H, W to H, W, C
+        return Image.fromarray(img_np)
+
     @staticmethod
-    def pil_to_tensor(image: Image.Image, normalize: bool = True) -> torch.Tensor:
-        """
-        Convert PIL Image to normalized torch tensor
+    def pil_to_tensor(image: Image.Image, img_norm_cfg: Optional[Dict] = None) -> torch.Tensor:
+        """Converts a PIL Image (RGB) to a normalized PyTorch tensor (C, H, W)."""
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        img_np = np.array(image).astype(np.float32) # H, W, C
         
-        Args:
-            image: PIL Image
-            normalize: Whether to apply ImageNet normalization
-            
-        Returns:
-            Normalized tensor [C, H, W]
-        """
-        try:
-            # Convert to numpy
-            img_np = np.array(image).astype(np.float32)
-            
-            # Convert RGB to BGR if needed (OpenCV format)
-            if img_np.shape[2] == 3:
-                img_np = img_np[:, :, ::-1]  # RGB to BGR
-            
-            # Normalize
-            if normalize:
-                mean = np.array([123.675, 116.28, 103.53])
-                std = np.array([58.395, 57.12, 57.375])
-                img_np = (img_np - mean) / std
-            
-            # Convert to tensor and rearrange dimensions
-            tensor = torch.from_numpy(img_np.transpose(2, 0, 1))
-            
-            return tensor
-        except Exception as e:
-            logger.error(f"Error converting PIL to tensor: {e}")
-            return torch.zeros(3, 224, 224)
-    
+        if img_norm_cfg:
+            mean = np.array(img_norm_cfg['mean'])
+            std = np.array(img_norm_cfg['std'])
+            img_np = (img_np - mean) / std # Normalize
+        
+        return torch.from_numpy(img_np).permute(2, 0, 1) # H, W, C to C, H, W
+
     @staticmethod
-    def validate_annotations(annotations: Dict, image_size: Tuple[int, int]) -> bool:
+    def validate_annotations(annotations: List[Dict], image_width: int, image_height: int) -> bool:
         """
-        Validate annotation format and values
-        
-        Args:
-            annotations: Annotation dictionary
-            image_size: (width, height) of image
-            
-        Returns:
-            True if valid, False otherwise
+        Validates the structure and content of annotations.
+        Ensures bounding box coordinates are within image bounds and labels are valid (for PubLayNet).
         """
-        try:
-            required_keys = ['bboxes', 'labels', 'image_size']
-            
-            # Check required keys
-            for key in required_keys:
-                if key not in annotations:
-                    logger.warning(f"Missing required key in annotations: {key}")
-                    return False
-            
-            # Validate bboxes
-            bboxes = annotations['bboxes']
-            if not isinstance(bboxes, list):
-                logger.warning("Bboxes must be a list")
-                return False
-            
-            for bbox in bboxes:
-                if not isinstance(bbox, list) or len(bbox) != 4:
-                    logger.warning(f"Invalid bbox format: {bbox}")
-                    return False
-                
-                # Check if bbox coordinates are within image bounds
-                x1, y1, x2, y2 = bbox
-                if x1 < 0 or y1 < 0 or x2 > image_size[0] or y2 > image_size[1]:
-                    logger.warning(f"Bbox out of image bounds: {bbox}, image_size: {image_size}")
-                    return False
-            
-            # Validate labels
-            labels = annotations['labels']
-            if not isinstance(labels, list):
-                logger.warning("Labels must be a list")
-                return False
-            
-            if len(bboxes) != len(labels):
-                logger.warning("Number of bboxes and labels must match")
-                return False
-            
-            # Validate label values (M6Doc has 75 classes)
-            for label in labels:
-                if not isinstance(label, int) or label < 0 or label >= 75:
-                    logger.warning(f"Invalid label: {label}")
-                    return False
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error validating annotations: {e}")
+        if not annotations:
             return False
-    
+
+        for ann in annotations:
+            if not all(k in ann for k in ['bbox', 'category_id']):
+                logger.warning("Annotation missing 'bbox' or 'category_id'.")
+                return False
+            
+            bbox = ann['bbox']
+            category_id = ann['category_id']
+
+            # Bounding box format: [x, y, width, height] (COCO format)
+            if len(bbox) != 4 or not all(isinstance(coord, (int, float)) for coord in bbox):
+                logger.warning("Invalid bounding box format.")
+                return False
+            
+            x, y, w, h = bbox
+            # Ensure bbox coordinates are valid and within image bounds
+            if not (0 <= x < image_width and 0 <= y < image_height and
+                    w > 0 and h > 0 and
+                    x + w <= image_width + 1 and y + h <= image_height + 1): # Allow slight overflow for robustness
+                logger.warning(f"Bounding box out of image bounds or invalid size: {bbox} for image {image_width}x{image_height}")
+                return False
+
+            # Validate category_id for PubLayNet (categories 1-5)
+            if not (1 <= category_id <= 5):
+                logger.warning(f"Invalid category ID for PubLayNet: {category_id}. Expected 1-5.")
+                return False
+        return True
+
     @staticmethod
-    def adjust_bboxes_for_transformation(bboxes: List[List[float]], 
-                                       original_size: Tuple[int, int],
-                                       new_size: Tuple[int, int],
-                                       transform_info: Dict) -> List[List[float]]:
+    def adjust_bboxes_for_transformation(bboxes: List[List[float]], img_info: Dict, transform_matrix: np.ndarray) -> List[List[float]]:
         """
-        Adjust bounding boxes for image transformations
-        
-        Args:
-            bboxes: List of [x1, y1, x2, y2]
-            original_size: (width, height) of original image
-            new_size: (width, height) of transformed image
-            transform_info: Information about applied transformations
-            
-        Returns:
-            Adjusted bounding boxes
+        Adjusts bounding box coordinates based on a 2x3 affine transformation matrix.
+        This method is now more generic for geometric transformations during augmentation.
+        Note: This is typically for single transformations. Complex pipelines might need integrated augmentation handling.
         """
-        try:
-            adjusted_bboxes = []
-            orig_w, orig_h = original_size
-            new_w, new_h = new_size
-            
-            scale_x = new_w / orig_w
-            scale_y = new_h / orig_h
-            
-            for bbox in bboxes:
-                x1, y1, x2, y2 = bbox
-                
-                # Apply scaling
-                x1 = x1 * scale_x
-                y1 = y1 * scale_y
-                x2 = x2 * scale_x
-                y2 = y2 * scale_y
-                
-                # Apply rotation if present
-                if 'rotation' in transform_info:
-                    angle = transform_info['rotation']
-                    # Simplified rotation adjustment (for small angles)
-                    if abs(angle) > 5:
-                        # For significant rotations, we'd need proper affine transformation
-                        # This is a simplified version
-                        center_x, center_y = (x1 + x2) / 2, (y1 + y2) / 2
-                        # Approximate adjustment - in practice, use proper rotation matrix
-                        pass
-                
-                adjusted_bboxes.append([x1, y1, x2, y2])
-            
-            return adjusted_bboxes
-            
-        except Exception as e:
-            logger.error(f"Error adjusting bboxes: {e}")
+        if not bboxes or transform_matrix.shape != (2, 3):
             return bboxes
-    
-    @staticmethod
-    def create_sample_metadata(client_id: str, 
-                             privacy_level: str,
-                             augmentation_info: Dict,
-                             original_file: str = "") -> Dict:
-        """
-        Create standardized metadata for federated samples
-        
-        Args:
-            client_id: Identifier for the client
-            privacy_level: Privacy level (low/medium/high)
-            augmentation_info: Information about applied augmentations
-            original_file: Original filename (optional)
+
+        adjusted_bboxes = []
+        for bbox in bboxes:
+            # Convert [x1, y1, x2, y2] to 4 corner points (x,y)
+            x1, y1, x2, y2 = bbox
+            corners = np.array([
+                [x1, y1], [x2, y1], [x1, y2], [x2, y2]
+            ], dtype=np.float32)
+
+            # Apply transformation
+            # Add a column of ones for affine transform: [x, y, 1]
+            corners_homo = np.concatenate([corners, np.ones((corners.shape[0], 1), dtype=np.float32)], axis=1)
+            transformed_corners = corners_homo @ transform_matrix.T # (N, 3) @ (3, 2) = (N, 2)
+
+            # Find new min/max to form the new bounding box
+            min_x, min_y = np.min(transformed_corners, axis=0)
+            max_x, max_y = np.max(transformed_corners, axis=0)
+
+            # Clamp to image bounds if necessary (img_info should contain original_width/height)
+            orig_w = img_info.get('ori_shape')[1] if img_info.get('ori_shape') else max_x # Fallback
+            orig_h = img_info.get('ori_shape')[0] if img_info.get('ori_shape') else max_y # Fallback
             
-        Returns:
-            Metadata dictionary
-        """
-        return {
-            'client_id': client_id,
-            'privacy_level': privacy_level,
-            'augmentation_info': augmentation_info,
-            'original_file': original_file,
-            'timestamp': int(time.time()),
-            'version': '1.0'
-        }
-    
-    @staticmethod
-    def calculate_privacy_score(augmentation_info: Dict) -> float:
-        """
-        Calculate a privacy score based on augmentation strength
-        
-        Args:
-            augmentation_info: Information about applied augmentations
-            
-        Returns:
-            Privacy score between 0 (low privacy) and 1 (high privacy)
-        """
-        score = 0.0
-        transforms = augmentation_info.get('applied_transforms', [])
-        parameters = augmentation_info.get('parameters', {})
-        
-        # Score based on number and strength of transformations
-        if 'rotation' in transforms:
-            angle = abs(parameters.get('rotation_angle', 0))
-            score += min(angle / 15.0, 1.0) * 0.2
-        
-        if 'scaling' in transforms:
-            scale = parameters.get('scale_factor', 1.0)
-            deviation = abs(scale - 1.0)
-            score += min(deviation / 0.3, 1.0) * 0.2
-        
-        if 'perspective' in transforms:
-            score += 0.3
-        
-        if 'gaussian_blur' in transforms:
-            radius = parameters.get('blur_radius', 0)
-            score += min(radius / 2.0, 1.0) * 0.15
-        
-        if 'gaussian_noise' in transforms:
-            score += 0.15
-        
-        return min(score, 1.0)
-    
-    @staticmethod
-    def save_federated_sample(sample: Dict, output_dir: str, sample_id: str) -> bool:
-        """
-        Save federated sample to disk
-        
-        Args:
-            sample: Sample dictionary
-            output_dir: Output directory
-            sample_id: Unique sample identifier
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # Save image
-            image = DataUtils.decode_base64_to_image(sample['image_data'])
-            if image:
-                image_path = os.path.join(output_dir, f"{sample_id}.jpg")
-                image.save(image_path, "JPEG", quality=85)
-            
-            # Save annotations and metadata
-            metadata_path = os.path.join(output_dir, f"{sample_id}.json")
-            with open(metadata_path, 'w') as f:
-                json.dump({
-                    'annotations': sample['annotations'],
-                    'metadata': sample['metadata']
-                }, f, indent=2)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error saving federated sample: {e}")
-            return False
-    
-    @staticmethod
-    def load_federated_sample(input_dir: str, sample_id: str) -> Optional[Dict]:
-        """
-        Load federated sample from disk
-        
-        Args:
-            input_dir: Input directory
-            sample_id: Sample identifier
-            
-        Returns:
-            Sample dictionary or None if loading fails
-        """
-        try:
-            # Load image
-            image_path = os.path.join(input_dir, f"{sample_id}.jpg")
-            with open(image_path, 'rb') as f:
-                image_data = base64.b64encode(f.read()).decode()
-            
-            # Load metadata
-            metadata_path = os.path.join(input_dir, f"{sample_id}.json")
-            with open(metadata_path, 'r') as f:
-                metadata = json.load(f)
-            
-            return {
-                'image_data': image_data,
-                'annotations': metadata['annotations'],
-                'metadata': metadata['metadata']
-            }
-            
-        except Exception as e:
-            logger.error(f"Error loading federated sample: {e}")
-            return None
-    
-    @staticmethod
-    def create_federated_batch(samples: List[Dict]) -> Dict:
-        """
-        Create a batch of federated samples for transmission
-        
-        Args:
-            samples: List of sample dictionaries
-            
-        Returns:
-            Batch dictionary
-        """
-        return {
-            'batch_id': str(int(time.time())),
-            'samples': samples,
-            'batch_size': len(samples),
-            'total_clients': len(set(sample['metadata']['client_id'] for sample in samples)),
-            'average_privacy_score': np.mean([DataUtils.calculate_privacy_score(
-                sample['metadata']['augmentation_info']) for sample in samples])
-        }
-    
-    @staticmethod
-    def validate_federated_batch(batch: Dict) -> Tuple[bool, str]:
-        """
-        Validate a federated batch
-        
-        Args:
-            batch: Batch dictionary
-            
-        Returns:
-            (is_valid, error_message)
-        """
-        try:
-            required_keys = ['batch_id', 'samples', 'batch_size']
-            for key in required_keys:
-                if key not in batch:
-                    return False, f"Missing required key: {key}"
-            
-            if not isinstance(batch['samples'], list):
-                return False, "Samples must be a list"
-            
-            if len(batch['samples']) != batch['batch_size']:
-                return False, "Batch size doesn't match number of samples"
-            
-            # Validate each sample
-            for i, sample in enumerate(batch['samples']):
-                if 'image_data' not in sample:
-                    return False, f"Sample {i} missing image_data"
-                
-                if 'annotations' not in sample:
-                    return False, f"Sample {i} missing annotations"
-                
-                if 'metadata' not in sample:
-                    return False, f"Sample {i} missing metadata"
-            
-            return True, "Valid"
-            
-        except Exception as e:
-            return False, f"Validation error: {e}"
+            new_x1 = max(0, min_x)
+            new_y1 = max(0, min_y)
+            new_x2 = min(orig_w, max_x)
+            new_y2 = min(orig_h, max_y)
+
+            # Ensure valid bbox after clamping
+            if new_x2 > new_x1 and new_y2 > new_y1:
+                adjusted_bboxes.append([new_x1, new_y1, new_x2, new_y2])
+            else:
+                logger.warning(f"Transformation resulted in invalid bbox: {bbox} -> {[new_x1, new_y1, new_x2, new_y2]}. Skipping.")
+
+        return adjusted_bboxes
+
+    # The following methods are no longer relevant in this FedAvg architecture
+    # @staticmethod
+    # def create_sample_metadata(...)
+    # @staticmethod
+    # def calculate_privacy_score(...)
+    # @staticmethod
+    # def save_federated_sample(...)
+    # @staticmethod
+    # def load_federated_sample(...)
+    # @staticmethod
+    # def create_federated_batch(...)
+    # @staticmethod
+    # def validate_federated_batch(...)
 
 
 class FederatedDataConverter:
-    """Convert between RoDLA format and federated format"""
+    """
+    This class is now largely deprecated in a true FedAvg setup, as raw data isn't exchanged
+    in the same 'federated sample' format. However, its methods for converting to/from
+    RoDLA format might still be useful for internal client/server data handling if needed.
+    Keeping for potential utility, but primary usage is for model exchange.
+    """
+    
+    # FederatedDataConverter.federated_to_rodla and rodla_to_federated are less directly used
+    # in the model-update FL setup, as clients handle their own data loading for local training.
+    # The MMDetection pipeline handles transformations within the client's local training.
     
     @staticmethod
-    def rodla_to_federated(rodla_batch: Dict, client_id: str, 
-                          privacy_level: str = 'medium') -> List[Dict]:
+    def federated_to_rodla(federated_sample: Dict, config_path: str = None) -> Dict:
         """
-        Convert RoDLA batch format to federated sample format
-        
-        Args:
-            rodla_batch: Batch from RoDLA data loader
-            client_id: Client identifier
-            privacy_level: Privacy level for augmentations
-            
-        Returns:
-            List of federated samples
+        Converts a single federated sample dict (image data + annotations)
+        into a format suitable for RoDLA model input (img_tensor, gt_bboxes, gt_labels, img_metas).
+        This would primarily be used if you needed to process a single sample from a client's
+        raw data format for *some* server-side processing, but not for direct model training.
         """
-        samples = []
+        if config_path:
+            cfg = Config.fromfile(config_path)
+            test_pipeline = Compose(cfg.data.test.pipeline) # Or train pipeline for augmentations
+        else:
+            # Default normalization if no config given, consistent with PubLayNetDataset
+            img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+            test_pipeline = Compose([
+                dict(type='LoadImageFromFile'),
+                dict(
+                    type='MultiScaleFlipAug',
+                    img_scale=(1333, 800), # Default scale
+                    flip=False,
+                    transforms=[
+                        dict(type='Resize', keep_ratio=True),
+                        dict(type='Normalize', **img_norm_cfg),
+                        dict(type='Pad', size_divisor=32),
+                        dict(type='ImageToTensor', keys=['img']),
+                        dict(type='Collect', keys=['img']),
+                    ])
+            ])
+
+        image_data_b64 = federated_sample['image_data']
+        image_pil = DataUtils.decode_base64_to_image(image_data_b64)
         
-        try:
-            # Extract batch components
-            images = rodla_batch['img']
-            img_metas = rodla_batch['img_metas']
-            
-            # Handle different batch structures
-            if isinstance(rodla_batch['gt_bboxes'], list):
-                bboxes_list = rodla_batch['gt_bboxes']
-                labels_list = rodla_batch['gt_labels']
-            else:
-                # Convert tensor to list format
-                bboxes_list = [bboxes for bboxes in rodla_batch['gt_bboxes']]
-                labels_list = [labels for labels in rodla_batch['gt_labels']]
-            
-            for i in range(len(images)):
-                # Convert tensor to PIL Image
-                img_tensor = images[i]
-                pil_img = DataUtils.tensor_to_pil(img_tensor)
-                
-                # Prepare annotations
-                bboxes = bboxes_list[i].cpu().numpy().tolist() if hasattr(bboxes_list[i], 'cpu') else bboxes_list[i]
-                labels = labels_list[i].cpu().numpy().tolist() if hasattr(labels_list[i], 'cpu') else labels_list[i]
-                
-                # Get original image info
-                img_meta = img_metas[i].data if hasattr(img_metas[i], 'data') else img_metas[i]
-                original_size = (img_meta['ori_shape'][1], img_meta['ori_shape'][0])  # (width, height)
-                
-                annotations = {
-                    'bboxes': bboxes,
-                    'labels': labels,
-                    'image_size': original_size,
-                    'original_filename': img_meta.get('filename', 'unknown')
-                }
-                
-                # Create augmentation info (will be filled by augmentation engine)
-                augmentation_info = {
-                    'original_size': original_size,
-                    'applied_transforms': [],
-                    'parameters': {}
-                }
-                
-                # Create sample
-                sample = {
-                    'image_data': DataUtils.encode_image_to_base64(pil_img),
-                    'annotations': annotations,
-                    'metadata': DataUtils.create_sample_metadata(
-                        client_id, privacy_level, augmentation_info, 
-                        img_meta.get('filename', 'unknown'))
-                }
-                
-                samples.append(sample)
-                
-        except Exception as e:
-            logger.error(f"Error converting RoDLA to federated format: {e}")
+        # Prepare data for pipeline
+        # MMDetection expects filename, img, height, width initially
+        data_info = {
+            'img': np.array(image_pil),
+            'img_info': {'filename': federated_sample.get('filename', 'unknown.jpg'), 
+                         'width': image_pil.width, 'height': image_pil.height},
+            'ann_info': {'bboxes': [], 'labels': []} # No gt_bboxes/labels in input dict for test pipeline
+        }
         
-        return samples
-    
+        # If annotations are present in federated_sample and needed for validation/augmentation
+        if 'annotations' in federated_sample:
+            # Convert [x, y, w, h] to [x1, y1, x2, y2]
+            bboxes_xyxy = []
+            labels = []
+            for ann in federated_sample['annotations']:
+                x, y, w, h = ann['bbox']
+                bboxes_xyxy.append([x, y, x + w, y + h])
+                labels.append(ann['category_id'])
+            data_info['ann_info']['bboxes'] = np.array(bboxes_xyxy, dtype=np.float32)
+            data_info['ann_info']['labels'] = np.array(labels, dtype=np.int64)
+            # You might need to adjust the pipeline to handle gt_bboxes/labels in this case.
+            # Usually, for 'test' pipelines, these are not provided.
+            # For training, a different pipeline that handles gt_bboxes/labels is used.
+            # This method assumes conversion to basic RoDLA input, not a full training sample.
+
+        data = test_pipeline(data_info)
+        
+        # Manually add gt_bboxes and gt_labels if they were passed and are needed for a 'training' style output
+        if 'annotations' in federated_sample:
+            data['gt_bboxes'] = torch.tensor(bboxes_xyxy, dtype=torch.float32)
+            data['gt_labels'] = torch.tensor(labels, dtype=torch.int64)
+
+        return data
+
     @staticmethod
-    def federated_to_rodla(federated_sample: Dict) -> Dict:
+    def rodla_to_federated(rodla_batch: Dict) -> List[Dict]:
         """
-        Convert federated sample to RoDLA training format
+        Converts a batch of RoDLA-formatted samples into a list of federated sample dictionaries.
+        This method is now less directly used in FedAvg as clients exchange models, not raw data.
+        """
+        federated_samples = []
+        imgs = rodla_batch['img']
+        img_metas = rodla_batch['img_metas']
+        gt_bboxes_batch = rodla_batch['gt_bboxes']
+        gt_labels_batch = rodla_batch['gt_labels']
         
-        Args:
-            federated_sample: Federated sample dictionary
-            
-        Returns:
-            RoDLA format sample
-        """
-        try:
-            # Decode image
-            image = DataUtils.decode_base64_to_image(federated_sample['image_data'])
-            if image is None:
-                raise ValueError("Failed to decode image")
-            
-            # Convert to tensor (normalized)
-            img_tensor = DataUtils.pil_to_tensor(image)
-            
-            # Extract annotations
-            annotations = federated_sample['annotations']
-            bboxes = torch.tensor(annotations['bboxes'], dtype=torch.float32)
-            labels = torch.tensor(annotations['labels'], dtype=torch.int64)
-            
-            # Create img_meta
-            img_meta = {
-                'filename': federated_sample['metadata'].get('original_file', 'federated_sample'),
-                'ori_shape': (annotations['image_size'][1], annotations['image_size'][0], 3),
-                'img_shape': (img_tensor.shape[1], img_tensor.shape[2], 3),
-                'scale_factor': np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32),
-                'flip': False,
-                'flip_direction': None,
-                'img_norm_cfg': {
-                    'mean': [123.675, 116.28, 103.53],
-                    'std': [58.395, 57.12, 57.375],
-                    'to_rgb': True
-                }
-            }
-            
-            return {
-                'img': img_tensor,
-                'gt_bboxes': bboxes,
-                'gt_labels': labels,
-                'img_metas': img_meta
-            }
-            
-        except Exception as e:
-            logger.error(f"Error converting federated to RoDLA format: {e}")
-            # Return empty sample as fallback
-            return {
-                'img': torch.zeros(3, 800, 1333),
-                'gt_bboxes': torch.zeros(0, 4),
-                'gt_labels': torch.zeros(0, dtype=torch.int64),
-                'img_metas': {}
-            }
+        # Default normalization if not in config
+        img_norm_cfg = img_metas[0]['img_norm_cfg'] if 'img_norm_cfg' in img_metas[0] else dict(mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 
+        for i in range(len(imgs)):
+            img_tensor = imgs[i]
+            img_meta = img_metas[i]
+            gt_bboxes = gt_bboxes_batch[i]
+            gt_labels = gt_labels_batch[i]
 
-# Utility functions for easy access
+            image_pil = DataUtils.tensor_to_pil(img_tensor, img_norm_cfg)
+            image_data_b64 = DataUtils.encode_image_to_base64(image_pil)
+
+            annotations = []
+            for bbox, label in zip(gt_bboxes, gt_labels):
+                x1, y1, x2, y2 = bbox.tolist()
+                annotations.append({
+                    'bbox': [x1, y1, x2 - x1, y2 - y1], # Convert to [x, y, w, h]
+                    'category_id': label.item()
+                })
+            
+            federated_samples.append({
+                'filename': img_meta['filename'],
+                'image_data': image_data_b64,
+                'annotations': annotations,
+                'img_original_width': img_meta['ori_shape'][1],
+                'img_original_height': img_meta['ori_shape'][0],
+                'augmentation_metadata': {} # No explicit perturbation here
+            })
+        return federated_samples
+
+# Utility functions for easy access (still relevant for client-side data handling)
 def encode_image(image: Image.Image) -> str:
     return DataUtils.encode_image_to_base64(image)
 
@@ -595,6 +304,10 @@ def validate_sample(sample: Dict) -> bool:
 
 # Initialize logging
 import time
+# The original validate_sample function is removed as raw federated samples are not processed directly
+# on the server in this architecture. Clients manage their own data.
+
+# Initialize logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
