@@ -82,11 +82,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount frontend static files
-if Config.FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(Config.FRONTEND_DIR), html=True), name="frontend")
-else:
-    print(f"⚠️  Frontend directory not found: {Config.FRONTEND_DIR}")
+# Note: Static files will be mounted at the END after all API routes are defined
+# This ensures /api/* routes take priority over static file fallback
 
 
 # ============================================================================
@@ -289,12 +286,25 @@ def load_model():
     if model_state["device"] == "cpu":
         print("⚠️  WARNING: DCNv3 (used in InternImage backbone) only supports CUDA")
         print("   CPU inference is NOT available. Using heuristic fallback.")
+        print("   Skipping MMDET model load on CPU-only system.")
+        model_state["loaded"] = False
+        model_state["mmdet_available"] = False
+        model_state["error"] = "CUDA required for MMDET inference"
+        return None
     
-    # Try to import and load MMDET
+    # Try to import and load MMDET (GPU only)
     try:
         print("⏳ Setting up model environment...")
         import torch
-        from mmdet.apis import init_detector
+        
+        # Try to import mmdet with graceful degradation
+        try:
+            from mmdet.apis import init_detector
+        except ImportError as ie:
+            print(f"⚠️  MMDET import error: {ie}")
+            print("   This may be due to missing mmcv._ext (compiled C++ extension)")
+            print("   Attempting alternative loading method...")
+            raise ie
         
         print("⏳ Loading model from weights (this will take ~30-60 seconds)...")
         print("   File: 3.8GB checkpoint...")
@@ -678,6 +688,17 @@ async def generate_perturbations(file: UploadFile = File(...)):
             "message": str(e),
             "perturbations": {}
         }
+
+
+# ============================================================================
+# Mount frontend static files (MUST be last to not interfere with /api routes)
+# ============================================================================
+
+if Config.FRONTEND_DIR.exists():
+    print(f"📁 Mounting frontend from: {Config.FRONTEND_DIR}")
+    app.mount("/", StaticFiles(directory=str(Config.FRONTEND_DIR), html=True), name="frontend")
+else:
+    print(f"⚠️  Frontend directory not found: {Config.FRONTEND_DIR}")
 
 
 # ============================================================================

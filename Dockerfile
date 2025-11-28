@@ -4,16 +4,19 @@ FROM python:3.8-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies needed for mmcv compilation and OpenCV
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
         build-essential \
+        cmake \
+        ninja-build \
         libsm6 \
         libxext6 \
         libgl1 \
         libglib2.0-0 \
         libssl-dev \
+        libcuda-dev \
         wget \
         curl && \
     apt-get clean && \
