@@ -21,6 +21,7 @@ import cv2
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -90,22 +91,28 @@ app.add_middleware(
 # Root endpoint
 # ============================================================================
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
     """Root endpoint - serve index.html"""
-    if (Config.FRONTEND_DIR / "index.html").exists():
-        with open(Config.FRONTEND_DIR / "index.html", "r") as f:
-            return {"message": "Frontend served - navigate to the web interface"}
-    return {
-        "title": "RoDLA Document Layout Analysis API",
-        "message": "API is running. Frontend files not found.",
-        "endpoints": {
-            "detection": "/api/detect",
-            "health": "/api/health",
-            "model_info": "/api/model-info",
-            "perturbations": "/api/perturbations/info"
-        }
-    }
+    index_path = Config.FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        with open(index_path, "r") as f:
+            return f.read()
+    return """
+    <html>
+        <body style="font-family: monospace; margin: 20px;">
+            <h1>RoDLA Document Layout Analysis API</h1>
+            <p>API is running but frontend files not found.</p>
+            <h2>Available Endpoints:</h2>
+            <ul>
+                <li><a href="/api/health">GET /api/health</a> - Health check</li>
+                <li><a href="/api/model-info">GET /api/model-info</a> - Model info</li>
+                <li>POST /api/detect - Detection endpoint</li>
+                <li>POST /api/generate-perturbations - Perturbations</li>
+            </ul>
+        </body>
+    </html>
+    """
 
 
 # ============================================================================
