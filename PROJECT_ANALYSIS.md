@@ -99,6 +99,31 @@ rodla-academic/
     └── *.py                   # Various perturbation methods
 ```
 
+## Datasets
+
+### Training
+Download the RoDLA dataset from Google Driver to the desired root directory for training.
+  - [PubLayNet-P](https://drive.google.com/file/d/1bfjaxb5fAjU7sFqtM3GfNYm0ynrB5Vwo/view?usp=drive_link)
+
+### Finetuning
+
+Download the RoDLA dataset from Google Driver to the desired root directory for finetuning.
+  - [DockBank](https://drive.google.com/drive/folders/1h0lda3t2vXO-jp8-XgHtLcyXcMX1LT-9?usp=sharing)
+
+
+## Weights
+
+### Training
+Download the weights of model pretrained on PubLayNet-P from Google Driver.
+ - [Checkpoints for PubLayNet](https://drive.google.com/file/d/1I2CafA-wRKAWCqFgXPgtoVx3OQcRWEjp/view?usp=sharing)
+
+### Finetuning
+
+Download the weights of model finetuned on DocBank from Google Driver.
+  - [Checkpoints for DocBank](https://drive.google.com/file/d/1BHyz2jH52Irt6izCeTRb4g2J5lXsA9cz/view?usp=drive_link)
+
+
+
 ## 🚀 Quick Start
 
 ### Option 1: Automated Startup (Recommended)
