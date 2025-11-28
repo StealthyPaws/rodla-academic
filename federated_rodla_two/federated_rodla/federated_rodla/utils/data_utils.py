@@ -1,4 +1,15 @@
 # utils/data_utils.py
+
+import base64
+import io
+import json
+import numpy as np
+import torch
+from PIL import Image
+import cv2
+from typing import Dict, List, Optional, Tuple
+import os
+import logging
 import logging
 from PIL import Image
 from typing import Dict, List, Optional, Tuple
@@ -280,6 +291,19 @@ def encode_image(image: Image.Image) -> str:
 def decode_image(image_data: str) -> Image.Image:
     return DataUtils.decode_base64_to_image(image_data)
 
+def validate_sample(sample: Dict) -> bool:
+    """Quick validation of a federated sample"""
+    if 'image_data' not in sample or 'annotations' not in sample:
+        return False
+    
+    image = decode_image(sample['image_data'])
+    if image is None:
+        return False
+    
+    return DataUtils.validate_annotations(sample['annotations'], image.size)
+
+# Initialize logging
+import time
 # The original validate_sample function is removed as raw federated samples are not processed directly
 # on the server in this architecture. Clients manage their own data.
 
